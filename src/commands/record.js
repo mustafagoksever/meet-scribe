@@ -86,7 +86,7 @@ class AudioRecorder {
         if (!this.isPaused && this.isRecording) {
             const speakerId = demoCounter % 2;
             broadcastMessage('transcript', {
-                time: formatTime(new Date() - this.startTime),
+                time: formatTime((new Date() - this.startTime) / 1000),
                 speakerLabel: `S${speakerId}`,
                 text: `(Demo ${demoCounter}) This is a generated test sentence because the microphone is silent.`
             });
