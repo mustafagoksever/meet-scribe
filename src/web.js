@@ -4,11 +4,14 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
+import EventEmitter from 'events';
+import open from 'open';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let wss = null;
+export const webEvents = new EventEmitter();
 
 export function startWebServer(port) {
   const app = express();
@@ -24,6 +27,17 @@ export function startWebServer(port) {
 
   wss.on('connection', (ws) => {
     ws.send(JSON.stringify({ type: 'status', payload: 'Connected to MeetScribe Web Dashboard' }));
+
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        if (data.type === 'action') {
+          webEvents.emit(data.payload); // 'pause', 'resume', 'stop'
+        }
+      } catch (err) {
+        // ignore
+      }
+    });
   });
 
   // Handle server errors silently if port is in use
@@ -35,8 +49,27 @@ export function startWebServer(port) {
     }
   });
 
-  server.listen(port, () => {
-    console.log(chalk.cyan(`\n🌐 Web Dashboard running at: http://localhost:${port}`));
+  server.listen(port, '0.0.0.0', () => {
+    import('os').then(os => {
+      const interfaces = os.networkInterfaces();
+      const addresses = [];
+      for (const k in interfaces) {
+        for (const k2 in interfaces[k]) {
+          const address = interfaces[k][k2];
+          if (address.family === 'IPv4' && !address.internal) {
+            addresses.push(address.address);
+          }
+        }
+      }
+      console.log(chalk.cyan(`\n🌐 Web Dashboard running at:`));
+      console.log(chalk.cyan(`   Local:   http://localhost:${port}`));
+      if (addresses.length > 0) {
+        console.log(chalk.cyan(`   Network: http://${addresses[0]}:${port}`));
+      }
+
+      // Auto-open browser
+      open(`http://localhost:${port}`).catch(() => {});
+    });
   });
 
   return server;

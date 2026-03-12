@@ -8,7 +8,7 @@ import { generateMarkdown, saveMarkdown, saveHtml } from '../output.js';
 import { exitIfNoFfmpeg, addWavHeader, calculateRMS, formatTime, printBanner } from '../utils.js';
 import { detectAudioDevice } from '../audio-detect.js';
 import { sendNotifications } from '../notify.js';
-import { startWebServer, broadcastMessage } from '../web.js';
+import { startWebServer, broadcastMessage, webEvents } from '../web.js';
 
 // Speaker colors — unlimited speaker support, colors cycle
 const SPEAKER_COLORS = [
@@ -231,6 +231,27 @@ class AudioRecorder {
     const cleanup = () => this._cleanup();
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
+
+    if (this.config.web) {
+      webEvents.on('pause', () => {
+        if (!this.isPaused) {
+          this.isPaused = true;
+          console.log(chalk.yellow('\n⏸  [Web] Paused'));
+          broadcastMessage('pause');
+        }
+      });
+      webEvents.on('resume', () => {
+        if (this.isPaused) {
+          this.isPaused = false;
+          console.log(chalk.green('▶  [Web] Resuming...\n'));
+          broadcastMessage('resume');
+        }
+      });
+      webEvents.on('stop', () => {
+        console.log(chalk.yellow('\n⏹  [Web] Stop requested'));
+        this._cleanup();
+      });
+    }
   }
 
   async _cleanup() {

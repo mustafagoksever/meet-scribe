@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MeetScribe Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
   <style>
     :root {
       --bg: #09090b;
@@ -53,6 +54,36 @@
       align-items: center;
       gap: 0.5rem;
     }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn:hover { background: var(--border); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
 
     .status-indicator {
       display: flex;
@@ -304,9 +335,17 @@
       </svg>
       MeetScribe
     </div>
-    <div class="status-indicator">
-      <div id="conn-dot" class="dot"></div>
-      <span id="conn-status">Connecting...</span>
+    
+    <div class="controls">
+      <button id="btn-pause" class="btn" onclick="togglePause()">⏸ Pause</button>
+      <button id="btn-stop" class="btn btn-danger" onclick="stopRecording()">⏹ Stop</button>
+      
+      <div style="width: 1px; height: 24px; background: var(--border); margin: 0 1rem;"></div>
+      
+      <div class="status-indicator">
+        <div id="conn-dot" class="dot"></div>
+        <span id="conn-status">Connecting...</span>
+      </div>
     </div>
   </header>
 
@@ -359,20 +398,24 @@
     const connStatus = document.getElementById('conn-status');
     const summaryModal = document.getElementById('summary-modal');
     const summaryBody = document.getElementById('summary-body');
+    const btnPause = document.getElementById('btn-pause');
+    const btnStop = document.getElementById('btn-stop');
 
     const knownSpeakers = new Set();
+    let isPausedLocally = false;
+    let wsConnection = null;
     
     // Connect to WebSocket
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}`);
+      wsConnection = new WebSocket(`${protocol}//${window.location.host}`);
 
-      ws.onopen = () => {
+      wsConnection.onopen = () => {
         connDot.className = 'dot connected';
         connStatus.textContent = 'Standby';
       };
 
-      ws.onmessage = (event) => {
+      wsConnection.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           handleMessage(data);
@@ -381,7 +424,7 @@
         }
       };
 
-      ws.onclose = () => {
+      wsConnection.onclose = () => {
         connDot.className = 'dot';
         connStatus.textContent = 'Disconnected';
         setTimeout(connect, 2000); // Reconnect
@@ -396,15 +439,23 @@
           if (data.payload === 'Recording started') {
             connDot.className = 'dot recording';
             connStatus.textContent = 'Recording live...';
+            btnPause.disabled = false;
+            btnStop.disabled = false;
+            isPausedLocally = false;
+            btnPause.innerHTML = '⏸ Pause';
           }
           break;
         case 'pause':
           connDot.className = 'dot paused';
           connStatus.textContent = 'Paused';
+          isPausedLocally = true;
+          btnPause.innerHTML = '▶ Resume';
           break;
         case 'resume':
           connDot.className = 'dot recording';
           connStatus.textContent = 'Recording live...';
+          isPausedLocally = false;
+          btnPause.innerHTML = '⏸ Pause';
           break;
         case 'transcript':
           addTranscript(data.payload);
@@ -415,7 +466,29 @@
         case 'end':
           connDot.className = 'dot connected';
           connStatus.textContent = 'Recording ended';
+          btnPause.disabled = true;
+          btnStop.disabled = true;
           break;
+      }
+    }
+
+    function togglePause() {
+      if (!wsConnection || wsConnection.readyState !== 1) return;
+      if (isPausedLocally) {
+        wsConnection.send(JSON.stringify({ type: 'action', payload: 'resume' }));
+      } else {
+        wsConnection.send(JSON.stringify({ type: 'action', payload: 'pause' }));
+      }
+    }
+
+    function stopRecording() {
+      if (!wsConnection || wsConnection.readyState !== 1) return;
+      if (confirm('Are you sure you want to stop recording and generate the summary?')) {
+        wsConnection.send(JSON.stringify({ type: 'action', payload: 'stop' }));
+        btnPause.disabled = true;
+        btnStop.disabled = true;
+        connDot.className = 'dot';
+        connStatus.textContent = 'Processing...';
       }
     }
 
