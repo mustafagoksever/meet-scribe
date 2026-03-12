@@ -115,14 +115,18 @@ class AudioRecorder {
       '-ar', '16000',
       '-ac', '1',
       '-f', 'wav',
-      '-fragment_size', '4096',
       'pipe:1',
     );
 
     this.ffmpeg = spawn('ffmpeg', args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
     let stderr = '';
-    this.ffmpeg.stderr.on('data', (d) => { stderr += d.toString(); });
+    this.ffmpeg.stderr.on('data', (d) => {
+      const msg = d.toString();
+      stderr += msg;
+      // DEBUG:
+      console.log(chalk.red('[FFMPEG STDERR] ' + msg.trim()));
+    });
 
     this.ffmpeg.on('error', (err) => {
       console.error(chalk.red(`\n✖ Could not start ffmpeg: ${err.message}`));
