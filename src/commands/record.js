@@ -198,7 +198,7 @@ class AudioRecorder {
     const rms = calculateRMS(rawBuffer);
     const time = formatTime(this.chunkStartTime);
 
-    if (rms < 0.005) {
+    if (rms < 0.0005) {
       console.log(chalk.dim(`  [${time}] (silence — skipping)`));
       return;
     }

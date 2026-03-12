@@ -45,15 +45,18 @@ function detectWindowsDevice() {
   }
 
   const loopback = findByKeywords(devices, WINDOWS_LOOPBACK_KEYWORDS);
+  // Exclude loopback from standard devices to prioritize mics
+  const mics = devices.filter(d => d !== loopback);
 
-  if (loopback) {
-    return { args: ['-f', 'dshow', '-i', `audio=${loopback}`], deviceName: loopback };
+  if (mics.length > 0) {
+    console.log(chalk.green(`✓ Found microphone: "${mics[0]}"`));
+    if (loopback) console.log(chalk.dim(`  (Note: System audio loopback "${loopback}" was also found, but prioritizing microphone)`));
+    return { args: ['-f', 'dshow', '-i', `audio=${mics[0]}`], deviceName: mics[0] };
   }
 
-  if (devices.length > 0) {
-    console.log(chalk.yellow(`⚠ Loopback device not found. Using microphone: "${devices[0]}"`));
-    console.log(chalk.dim('  To capture system audio, enable "Stereo Mix" in Sound settings.\n'));
-    return { args: ['-f', 'dshow', '-i', `audio=${devices[0]}`], deviceName: devices[0] };
+  if (loopback) {
+    console.log(chalk.yellow(`⚠ No microphone found. Using system loopback: "${loopback}"`));
+    return { args: ['-f', 'dshow', '-i', `audio=${loopback}`], deviceName: loopback };
   }
 
   console.log(chalk.yellow('⚠ Could not list audio devices, trying default input...'));
