@@ -121,12 +121,7 @@ class AudioRecorder {
     this.ffmpeg = spawn('ffmpeg', args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
     let stderr = '';
-    this.ffmpeg.stderr.on('data', (d) => {
-      const msg = d.toString();
-      stderr += msg;
-      // DEBUG:
-      console.log(chalk.red('[FFMPEG STDERR] ' + msg.trim()));
-    });
+    this.ffmpeg.stderr.on('data', (d) => { stderr += d.toString(); });
 
     this.ffmpeg.on('error', (err) => {
       console.error(chalk.red(`\n✖ Could not start ffmpeg: ${err.message}`));
@@ -139,18 +134,11 @@ class AudioRecorder {
 
   _onAudioData(data) {
     if (this.isPaused) return; // Skip buffering when paused
-
-    if (!this.headerSkipped) {
-      this.headerBuffer = Buffer.concat([this.headerBuffer, data]);
-      if (this.headerBuffer.length >= 44) {
-        const remaining = this.headerBuffer.subarray(44);
-        if (remaining.length > 0) {
-          this.currentBuffer = Buffer.concat([this.currentBuffer, remaining]);
-        }
-        this.headerSkipped = true;
-      }
-      return;
-    }
+    
+    // We used to try to strip the first 44 bytes of WAV header here
+    // but Windows DShow pipelines can chunk data awkwardly causing deadlocks.
+    // Instead we just capture everything. The trailing `addWavHeader`
+    // will just inject a second header which Whisper handles perfectly fine.
     this.currentBuffer = Buffer.concat([this.currentBuffer, data]);
   }
 
