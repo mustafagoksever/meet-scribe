@@ -6,11 +6,38 @@
   "bin": {
     "meet-scribe": "./bin/meet-scribe.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
   "scripts": {
-    "start": "node bin/meet-scribe.js"
+    "start": "node bin/meet-scribe.js",
+    "test": "node bin/meet-scribe.js --help"
   },
-  "keywords": ["meeting", "transcription", "whisper", "openai", "cli"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mustafagoksever/meet-scribe.git"
+  },
+  "homepage": "https://github.com/mustafagoksever/meet-scribe#readme",
+  "bugs": {
+    "url": "https://github.com/mustafagoksever/meet-scribe/issues"
+  },
+  "author": "Mustafa Goksever",
+  "keywords": [
+    "meeting",
+    "transcription",
+    "whisper",
+    "openai",
+    "cli",
+    "speech-to-text",
+    "meeting-notes",
+    "zulip"
+  ],
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",

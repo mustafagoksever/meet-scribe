@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify CLI loads
+        run: node bin/meet-scribe.js --help
+
+      - name: Verify all commands
+        run: |
+          node bin/meet-scribe.js --version
+          node bin/meet-scribe.js templates
+          node bin/meet-scribe.js init
+          node bin/meet-scribe.js list
+          node bin/meet-scribe.js actions
+          node bin/meet-scribe.js record --help
+          node bin/meet-scribe.js transcribe --help
+          node bin/meet-scribe.js search --help
