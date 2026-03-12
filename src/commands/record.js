@@ -228,9 +228,16 @@ class AudioRecorder {
   // ── Ctrl+C & cleanup ──────────────────
 
   _registerSignals() {
-    const cleanup = () => this._cleanup();
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    const handleExit = () => {
+      if (!this.isRecording) {
+        // Second Ctrl+C -> force exit
+        process.exit(0);
+      } else {
+        this._cleanup();
+      }
+    };
+    process.on('SIGINT', handleExit);
+    process.on('SIGTERM', handleExit);
 
     if (this.config.web) {
       webEvents.on('pause', () => {
@@ -275,7 +282,12 @@ class AudioRecorder {
     }
 
     await this._saveResults();
-    process.exit(0);
+    
+    if (this.config.web) {
+      console.log(chalk.cyan('\n🌐 Web Dashboard is still active. Press Ctrl+C again to exit the CLI.'));
+    } else {
+      process.exit(0);
+    }
   }
 
   async _saveResults() {
