@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetScribe Dashboard</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-surface: #18181b;
+      --bg-card: #27272a;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --border: #3f3f46;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+
+    .brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      box-shadow: 0 0 10px transparent;
+      transition: all 0.3s ease;
+    }
+
+    .dot.recording {
+      background: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+      animation: pulse 2s infinite;
+    }
+
+    .dot.paused {
+      background: var(--warning);
+      box-shadow: 0 0 10px var(--warning);
+    }
+
+    .dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 350px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+
+    .panel-header {
+      padding: 1rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .participants {
+      padding: 1rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .speaker-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+      font-size: 0.95rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+
+    .speaker-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .transcripts-container {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .transcript-item {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 0.4s ease-out;
+      border-left: 3px solid transparent;
+      padding-left: 1rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .transcript-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .transcript-text {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      background: var(--bg-card);
+      padding: 1rem 1.2rem;
+      border-radius: 8px;
+      display: inline-block;
+      max-width: 90%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .summary-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .summary-modal.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .summary-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+
+    .summary-modal.active .summary-content {
+      transform: translateY(0);
+    }
+
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-title {
+      font-size: 1.5rem;
+      color: var(--accent);
+    }
+
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.5rem;
+    }
+
+    .btn-close:hover { color: var(--text); }
+
+    .summary-body h3 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    
+    .summary-body p, .summary-body li {
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-body ul {
+      padding-left: 1.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.1);
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+      MeetScribe
+    </div>
+    <div class="status-indicator">
+      <div id="conn-dot" class="dot"></div>
+      <span id="conn-status">Connecting...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="sidebar">
+      <div class="panel-header">
+        <span>Participants</span>
+        <span class="badge" id="speaker-count">0</span>
+      </div>
+      <div class="participants" id="participants-list">
+        <!-- Speakers populated dynamically -->
+        <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; margin-top: 2rem;">Waiting for speech...</div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="transcripts-container" id="transcript-box">
+        <div class="empty-state" id="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <h2>Ready to Transcribe</h2>
+          <p>Listening to meeting audio...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-modal" id="summary-modal">
+    <div class="summary-content">
+      <div class="summary-header">
+        <div class="summary-title" id="summary-title">Meeting Completed</div>
+        <button class="btn-close" onclick="closeSummary()">×</button>
+      </div>
+      <div class="summary-body" id="summary-body">
+        <!-- Populated via JS -->
+        Generating analysis...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const transcriptBox = document.getElementById('transcript-box');
+    const emptyState = document.getElementById('empty-state');
+    const participantsList = document.getElementById('participants-list');
+    const speakerCount = document.getElementById('speaker-count');
+    const connDot = document.getElementById('conn-dot');
+    const connStatus = document.getElementById('conn-status');
+    const summaryModal = document.getElementById('summary-modal');
+    const summaryBody = document.getElementById('summary-body');
+
+    const knownSpeakers = new Set();
+    
+    // Connect to WebSocket
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        connDot.className = 'dot connected';
+        connStatus.textContent = 'Standby';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleMessage(data);
+        } catch (e) {
+          console.error("Parse error", e);
+        }
+      };
+
+      ws.onclose = () => {
+        connDot.className = 'dot';
+        connStatus.textContent = 'Disconnected';
+        setTimeout(connect, 2000); // Reconnect
+      };
+    }
+
+    function handleMessage(data) {
+      if (emptyState) emptyState.style.display = 'none';
+
+      switch (data.type) {
+        case 'status':
+          if (data.payload === 'Recording started') {
+            connDot.className = 'dot recording';
+            connStatus.textContent = 'Recording live...';
+          }
+          break;
+        case 'pause':
+          connDot.className = 'dot paused';
+          connStatus.textContent = 'Paused';
+          break;
+        case 'resume':
+          connDot.className = 'dot recording';
+          connStatus.textContent = 'Recording live...';
+          break;
+        case 'transcript':
+          addTranscript(data.payload);
+          break;
+        case 'summary':
+          showSummary(data.payload);
+          break;
+        case 'end':
+          connDot.className = 'dot connected';
+          connStatus.textContent = 'Recording ended';
+          break;
+      }
+    }
+
+    function addTranscript({ time, speakerLabel, speakerColor, text }) {
+      // Hex conversion for terminal colors (approximate)
+      const colorMap = {
+        cyan: '#22d3ee', green: '#4ade80', magenta: '#d946ef', 
+        yellow: '#facc15', blue: '#60a5fa', red: '#f87171',
+        white: '#ffffff'
+      };
+      
+      // Simple fallback color parsing (if ANSI code or chalk color names are passed)
+      // Since we modified record.js to send exact hex or names, we'll assume a hex color or css variable.
+      // But chalk gives us ANSI, so we'll just assign deterministic colors from CSS based on speaker label.
+      
+      const colors = ['#22d3ee', '#4ade80', '#d946ef', '#facc15', '#60a5fa', '#f87171', '#e879f9'];
+      const sId = parseInt(speakerLabel.replace('S', '')) || 0;
+      const cssColor = colors[sId % colors.length];
+
+      // Update Sidebar
+      if (!knownSpeakers.has(speakerLabel)) {
+        if (knownSpeakers.size === 0) participantsList.innerHTML = '';
+        knownSpeakers.add(speakerLabel);
+        
+        const spDiv = document.createElement('div');
+        spDiv.className = 'speaker-tag';
+        spDiv.innerHTML = `<div class="speaker-color" style="background: ${cssColor}; box-shadow: 0 0 8px ${cssColor}"></div> ${speakerLabel}`;
+        participantsList.appendChild(spDiv);
+        speakerCount.textContent = knownSpeakers.size;
+      }
+
+      // Add Transcript Item
+      const item = document.createElement('div');
+      item.className = 'transcript-item';
+      item.style.borderLeftColor = cssColor;
+      
+      item.innerHTML = `
+        <div class="transcript-meta">
+          <span style="color: ${cssColor}; font-weight: bold">${speakerLabel}</span>
+          <span>${time}</span>
+        </div>
+        <div class="transcript-text">${text}</div>
+      `;
+      
+      transcriptBox.appendChild(item);
+      
+      // Auto scroll
+      transcriptBox.scrollTop = transcriptBox.scrollHeight;
+    }
+
+    function showSummary(analysis) {
+      if (!analysis) return;
+      
+      let html = `<h3>Summary</h3><p>${analysis.summary || 'N/A'}</p>`;
+      
+      if (analysis.tone) {
+        html += `<h3>Tone</h3><p><span class="badge">${analysis.tone}</span></p>`;
+      }
+      
+      if (analysis.action_items && analysis.action_items.length > 0) {
+        html += `<h3>Action Items</h3><ul>`;
+        analysis.action_items.forEach(a => {
+          html += `<li>☐ ${a.item} <strong>${a.owner ? '→ ' + a.owner : ''}</strong></li>`;
+        });
+        html += `</ul>`;
+      }
+      
+      // For any other arrays
+      const lists = ['key_topics', 'topics_discussed', 'went_well', 'went_wrong', 'improvements', 'decisions', 'agenda_items', 'feedback', 'growth_areas'];
+      lists.forEach(key => {
+        if (analysis[key] && analysis[key].length > 0) {
+          const title = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          html += `<h3>${title}</h3><ul>`;
+          analysis[key].forEach(i => {
+           const text = typeof i === 'string' ? i : i.decision || i.text;
+           html += `<li>${text}</li>`;
+          });
+          html += `</ul>`;
+        }
+      });
+      
+      summaryBody.innerHTML = html;
+      summaryModal.classList.add('active');
+    }
+
+    function closeSummary() {
+      summaryModal.classList.remove('active');
+    }
+
+    // Start
+    connect();
+  </script>
+</body>
+</html>

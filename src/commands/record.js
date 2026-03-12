@@ -8,6 +8,7 @@ import { generateMarkdown, saveMarkdown, saveHtml } from '../output.js';
 import { exitIfNoFfmpeg, addWavHeader, calculateRMS, formatTime, printBanner } from '../utils.js';
 import { detectAudioDevice } from '../audio-detect.js';
 import { sendNotifications } from '../notify.js';
+import { startWebServer, broadcastMessage } from '../web.js';
 
 // Speaker colors — unlimited speaker support, colors cycle
 const SPEAKER_COLORS = [
@@ -48,6 +49,10 @@ export async function handleRecord(opts) {
   console.log(chalk.dim(`  Chunk: ${chunkDuration}s | Model: ${config.sttModel} | Template: ${config.template}`));
   console.log(chalk.dim(`  Stop: Ctrl+C | Pause: Space\n`));
 
+  if (config.web) {
+    startWebServer(config.webPort);
+  }
+
   const recorder = new AudioRecorder(config, audioArgs, chunkDuration, startTime);
   recorder.start();
 }
@@ -73,6 +78,7 @@ class AudioRecorder {
   }
 
   start() {
+    if (this.config.web) broadcastMessage('status', 'Recording started');
     this._spawnFfmpeg();
     this._startChunkTimer();
     this._registerSignals();
@@ -140,8 +146,10 @@ class AudioRecorder {
           this.isPaused = !this.isPaused;
           if (this.isPaused) {
             console.log(chalk.yellow('\n⏸  Paused — press Space to resume'));
+            if (this.config.web) broadcastMessage('pause');
           } else {
             console.log(chalk.green('▶  Resuming...\n'));
+            if (this.config.web) broadcastMessage('resume');
           }
         }
         // Ctrl+C
@@ -204,6 +212,14 @@ class AudioRecorder {
         speaker.color(`[${speaker.label}]: `) +
         chalk.white(text)
       );
+
+      if (this.config.web) {
+        broadcastMessage('transcript', {
+          time,
+          speakerLabel: speaker.label,
+          text,
+        });
+      }
     } catch (err) {
       spinner.fail(`STT error: ${err.message}`);
     }
@@ -228,6 +244,7 @@ class AudioRecorder {
     }
 
     console.log(chalk.yellow('\n\n⏹  Stopping recording...'));
+    if (this.config.web) broadcastMessage('end');
 
     this.ffmpeg.stdin.write('q');
     this.ffmpeg.kill('SIGTERM');
@@ -255,6 +272,7 @@ class AudioRecorder {
       try {
         analysis = await summarizeTranscript(transcriptLines.join('\n'), config);
         spinner.succeed('Summary generated');
+        if (config.web) broadcastMessage('summary', analysis);
       } catch (err) {
         spinner.fail(`Summary error: ${err.message}`);
       }

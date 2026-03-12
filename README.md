@@ -12,10 +12,11 @@ CLI tool that records meetings, transcribes with Whisper API, summarizes with LL
 - **5 meeting templates** — General, standup, retro, decision, 1:1
 - **LLM analysis** — Summary, action items, decisions, tone analysis
 - **Markdown + HTML output** — Professional meeting notes format
-- **Zulip / Webhook** — Auto-notify after meeting ends
+- **Webhook / Zulip** — Auto-notify after meeting ends
 - **Meeting history** — Search, list, and track action items
 - **Noise filtering** — ffmpeg noise gate for cleaner audio
 - **Unlimited speakers** — 10 color-coded speaker labels, cycling
+- **Web Dashboard** — Real-time frontend UI during recording (`--web`)
 
 ## 📋 Requirements
 
@@ -228,6 +229,8 @@ $env:OPENAI_API_KEY="sk-..."             # PowerShell
 | `--zulip-stream` | Zulip stream name | — |
 | `--zulip-topic` | Zulip topic name | — |
 | `--noise-filter` | Enable noise filtering | off |
+| `--web` | Start real-time web dashboard | off |
+| `--web-port` | Web dashboard port | `3000` |
 
 ## 📋 Commands
 

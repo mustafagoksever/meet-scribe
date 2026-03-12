@@ -23,6 +23,8 @@ const DEFAULTS = {
   zulipStream: null,
   zulipTopic: null,
   noiseFilter: false,
+  web: false,
+  webPort: 3000,
 };
 
 /**
@@ -53,6 +55,8 @@ export function resolveConfig(opts) {
     zulipStream: opts.zulipStream || process.env.ZULIP_STREAM      || fileConfig.zulipStream || DEFAULTS.zulipStream,
     zulipTopic:  opts.zulipTopic  || process.env.ZULIP_TOPIC       || fileConfig.zulipTopic  || DEFAULTS.zulipTopic,
     noiseFilter: opts.noiseFilter || fileConfig.noiseFilter         || DEFAULTS.noiseFilter,
+    web:         opts.web         || fileConfig.web                 || DEFAULTS.web,
+    webPort:     parseInt(opts.webPort, 10) || fileConfig.webPort   || DEFAULTS.webPort,
   };
 
   if (!config.apiKey) {

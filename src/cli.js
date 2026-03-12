@@ -34,7 +34,9 @@ export function run() {
     .option('--zulip-api-key <key>', 'Zulip API key')
     .option('--zulip-stream <stream>', 'Zulip stream name')
     .option('--zulip-topic <topic>', 'Zulip topic name')
-    .option('--noise-filter', 'Enable noise filtering during recording');
+    .option('--noise-filter', 'Enable noise filtering during recording')
+    .option('--web', 'Start real-time web dashboard')
+    .option('--web-port <port>', 'Web dashboard port (default: 3000)');
 
   // init
   program
