@@ -26,8 +26,8 @@ const SPEAKER_COLORS = [
 
 function getSpeaker(index) {
   return {
-    label: `S${index}`,
-    color: SPEAKER_COLORS[index % SPEAKER_COLORS.length],
+    label: `Speaker`,
+    color: SPEAKER_COLORS[0],
   };
 }
 

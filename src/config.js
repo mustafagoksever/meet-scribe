@@ -13,7 +13,7 @@ const DEFAULTS = {
   language: 'auto',
   summary: true,
   output: './meet-scribe-output',
-  chunk: 30,
+  chunk: 15,
   template: 'default',
   format: 'md',
   webhook: null,
