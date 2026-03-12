@@ -13,33 +13,33 @@ export function run() {
 
   program
     .name('meet-scribe')
-    .description('Toplantı sesini kayıt eden, transkript eden ve özetleyen CLI aracı')
+    .description('CLI tool that records meetings, transcribes with Whisper, summarizes with LLM, and generates Markdown')
     .version('2.0.0');
 
-  // Global seçenekler
+  // Global options
   program
     .option('--api-key <key>', 'OpenAI API key (OPENAI_API_KEY env)')
     .option('--base-url <url>', 'Custom API base URL (OPENAI_BASE_URL env)')
     .option('--stt-model <model>', 'Whisper model (default: whisper-1)')
     .option('--llm-model <model>', 'LLM model (LLM_MODEL env, default: gpt-4o-mini)')
-    .option('--language <lang>', 'Dil kodu (default: auto)')
-    .option('--no-summary', 'LLM özetini atla')
-    .option('--output <dir>', 'Çıktı dizini (default: ./meet-scribe-output)')
-    .option('--chunk <seconds>', 'Record modunda chunk süresi saniye (default: 30)')
-    .option('--template <name>', 'Toplantı şablonu (default, standup, retro, decision, oneone)')
-    .option('--format <type>', 'Çıktı formatı: md, html (default: md)')
-    .option('--webhook <url>', 'Webhook URL (toplantı sonunda POST gönderir)')
-    .option('--zulip-url <url>', 'Zulip sunucu URL')
+    .option('--language <lang>', 'Language code (default: auto)')
+    .option('--no-summary', 'Skip LLM summary')
+    .option('--output <dir>', 'Output directory (default: ./meet-scribe-output)')
+    .option('--chunk <seconds>', 'Chunk duration in seconds for record mode (default: 30)')
+    .option('--template <name>', 'Meeting template (default, standup, retro, decision, oneone)')
+    .option('--format <type>', 'Output format: md, html (default: md)')
+    .option('--webhook <url>', 'Webhook URL (sends POST on meeting end)')
+    .option('--zulip-url <url>', 'Zulip server URL')
     .option('--zulip-email <email>', 'Zulip bot email')
     .option('--zulip-api-key <key>', 'Zulip API key')
-    .option('--zulip-stream <stream>', 'Zulip stream adı')
-    .option('--zulip-topic <topic>', 'Zulip topic adı')
-    .option('--noise-filter', 'Ses kaydında gürültü filtreleme');
+    .option('--zulip-stream <stream>', 'Zulip stream name')
+    .option('--zulip-topic <topic>', 'Zulip topic name')
+    .option('--noise-filter', 'Enable noise filtering during recording');
 
   // init
   program
     .command('init')
-    .description('Config dosyası (.meetscriberc) oluştur')
+    .description('Create config file (.meetscriberc)')
     .action(async () => {
       await handleInit();
     });
@@ -47,7 +47,7 @@ export function run() {
   // record
   program
     .command('record')
-    .description('Mikrofon + sistem sesini kaydet, gerçek zamanlı transkript et (Space=duraklatma)')
+    .description('Record mic + system audio, real-time transcription (Space=pause)')
     .action(async () => {
       await handleRecord(program.opts());
     });
@@ -55,7 +55,7 @@ export function run() {
   // transcribe
   program
     .command('transcribe <file>')
-    .description('Mevcut ses dosyasını transkript et')
+    .description('Transcribe an existing audio file')
     .action(async (file) => {
       await handleTranscribe(file, program.opts());
     });
@@ -63,8 +63,8 @@ export function run() {
   // list
   program
     .command('list')
-    .description('Son toplantıları listele')
-    .option('-n, --count <number>', 'Gösterilecek toplantı sayısı', '10')
+    .description('List recent meetings')
+    .option('-n, --count <number>', 'Number of meetings to show', '10')
     .action(async (cmdOpts) => {
       await handleList({ ...program.opts(), ...cmdOpts });
     });
@@ -72,7 +72,7 @@ export function run() {
   // search
   program
     .command('search <query>')
-    .description('Toplantılarda arama yap')
+    .description('Search across meeting transcripts')
     .action(async (query) => {
       await handleSearch(query, program.opts());
     });
@@ -80,7 +80,7 @@ export function run() {
   // actions
   program
     .command('actions')
-    .description('Tamamlanmamış aksiyon maddelerini listele')
+    .description('List open action items from all meetings')
     .action(async () => {
       await handleActions(program.opts());
     });
@@ -88,13 +88,13 @@ export function run() {
   // templates
   program
     .command('templates')
-    .description('Kullanılabilir toplantı şablonlarını listele')
+    .description('List available meeting templates')
     .action(() => {
-      console.log(chalk.bold.blue('\n📋 Toplantı Şablonları\n'));
+      console.log(chalk.bold.blue('\n📋 Meeting Templates\n'));
       for (const t of listTemplates()) {
         console.log(chalk.white(`  ${chalk.bold(t.key)}`) + chalk.dim(` — ${t.name}`));
       }
-      console.log(chalk.dim('\n  Kullanım: meet-scribe record --template standup\n'));
+      console.log(chalk.dim('\n  Usage: meet-scribe record --template standup\n'));
     });
 
   program.parse();

@@ -3,24 +3,24 @@ import path from 'path';
 import chalk from 'chalk';
 
 /**
- * meet-scribe search <query> — toplantılarda arama
+ * meet-scribe search <query> — search across meetings
  */
 export async function handleSearch(query, opts) {
   const outputDir = opts.output || './meet-scribe-output';
   const resolvedDir = path.resolve(outputDir);
 
   if (!fs.existsSync(resolvedDir)) {
-    console.log(chalk.yellow(`\n⚠ Çıktı dizini bulunamadı: ${resolvedDir}\n`));
+    console.log(chalk.yellow(`\n⚠ Output directory not found: ${resolvedDir}\n`));
     return;
   }
 
   const files = fs.readdirSync(resolvedDir)
-    .filter(f => f.startsWith('toplanti_') && f.endsWith('.md'))
+    .filter(f => f.startsWith('meeting_') && f.endsWith('.md'))
     .sort()
     .reverse();
 
   if (files.length === 0) {
-    console.log(chalk.yellow('\n⚠ Toplantı dosyası bulunamadı.\n'));
+    console.log(chalk.yellow('\n⚠ No meeting files found.\n'));
     return;
   }
 
@@ -32,7 +32,6 @@ export async function handleSearch(query, opts) {
     const content = fs.readFileSync(filePath, 'utf-8');
 
     if (content.toLowerCase().includes(queryLower)) {
-      // Eşleşen satırları bul
       const lines = content.split('\n');
       const matches = [];
 
@@ -47,11 +46,11 @@ export async function handleSearch(query, opts) {
   }
 
   if (results.length === 0) {
-    console.log(chalk.yellow(`\n⚠ "${query}" için sonuç bulunamadı.\n`));
+    console.log(chalk.yellow(`\n⚠ No results found for "${query}".\n`));
     return;
   }
 
-  console.log(chalk.bold.blue(`\n🔍 "${query}" — ${results.length} toplantıda bulundu\n`));
+  console.log(chalk.bold.blue(`\n🔍 "${query}" — found in ${results.length} meeting(s)\n`));
   console.log(chalk.dim('─'.repeat(60)));
 
   for (const result of results) {
@@ -60,7 +59,6 @@ export async function handleSearch(query, opts) {
 
     const shownMatches = result.matches.slice(0, 3);
     for (const match of shownMatches) {
-      // Aranan kelimeyi vurgula
       const highlighted = match.text.replace(
         new RegExp(query, 'gi'),
         (m) => chalk.bgYellow.black(m)
@@ -69,10 +67,10 @@ export async function handleSearch(query, opts) {
     }
 
     if (result.matches.length > 3) {
-      console.log(chalk.dim(`     ... ve ${result.matches.length - 3} eşleşme daha`));
+      console.log(chalk.dim(`     ... and ${result.matches.length - 3} more matches`));
     }
   }
 
   console.log(chalk.dim('\n' + '─'.repeat(60)));
-  console.log(chalk.dim(`  Toplam: ${results.length} dosya, ${results.reduce((s, r) => s + r.matches.length, 0)} eşleşme\n`));
+  console.log(chalk.dim(`  Total: ${results.length} file(s), ${results.reduce((s, r) => s + r.matches.length, 0)} match(es)\n`));
 }

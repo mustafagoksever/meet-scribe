@@ -2,27 +2,27 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Markdown toplantı dosyası üret
+ * Generate meeting Markdown file
  */
 export function generateMarkdown(transcriptLines, analysis, startTime) {
   const now = startTime || new Date();
-  const dateStr = formatDateTR(now);
-  const sureDk = analysis?.tahmini_sure_dk || '?';
-  const ton = analysis?.ton || 'nötr';
+  const dateStr = formatDate(now);
+  const durMin = analysis?.estimated_duration_min || '?';
+  const tone = analysis?.tone || 'neutral';
 
-  let md = `# Toplantı Transkripti
+  let md = `# Meeting Transcript
 
-**Tarih:** ${dateStr}
-**Süre:** ~${sureDk} dk
-**Ton:** ${ton}
+**Date:** ${dateStr}
+**Duration:** ~${durMin} min
+**Tone:** ${tone}
 
 ---
 
-## 📝 Transkript
+## 📝 Transcript
 
 `;
 
-  // Transkript satırları
+  // Transcript lines
   if (Array.isArray(transcriptLines)) {
     for (const line of transcriptLines) {
       md += `${line}\n`;
@@ -31,7 +31,7 @@ export function generateMarkdown(transcriptLines, analysis, startTime) {
     md += transcriptLines + '\n';
   }
 
-  // Analiz bölümleri
+  // Analysis sections
   if (analysis) {
     md += renderAnalysis(analysis);
   }
@@ -41,73 +41,73 @@ export function generateMarkdown(transcriptLines, analysis, startTime) {
 }
 
 /**
- * Analiz sonuçlarını Markdown bölümlerine dönüştür
- * Farklı şablonlardan gelen tüm alan türlerini destekler.
+ * Render analysis into Markdown sections
+ * Supports all field types from different templates.
  */
 function renderAnalysis(analysis) {
   let md = '';
 
-  // Özet (tüm şablonlarda var)
-  md += renderSection('📌 Özet', analysis.ozet || 'Özet oluşturulamadı.');
+  // Summary (present in all templates)
+  md += renderSection('📌 Summary', analysis.summary);
 
-  // Ana konular / tartışılan konular
-  md += renderList('🗂 Ana Konular', analysis.ana_konular || analysis.tartisilan_konular);
+  // Key topics / topics discussed
+  md += renderList('🗂 Key Topics', analysis.key_topics || analysis.topics_discussed);
 
-  // Standup: Katılımcılar
-  if (analysis.katilimcilar?.length > 0) {
-    md += '\n---\n\n## 👥 Katılımcılar\n\n';
-    for (const k of analysis.katilimcilar) {
-      md += `### ${k.isim}\n`;
-      md += `- **Dün:** ${k.dun_yapilan || '—'}\n`;
-      md += `- **Bugün:** ${k.bugun_planli || '—'}\n`;
-      if (k.engeller) md += `- **Engel:** ${k.engeller}\n`;
+  // Standup: Participants
+  if (analysis.participants?.length > 0) {
+    md += '\n---\n\n## 👥 Participants\n\n';
+    for (const p of analysis.participants) {
+      md += `### ${p.name}\n`;
+      md += `- **Yesterday:** ${p.yesterday || '—'}\n`;
+      md += `- **Today:** ${p.today || '—'}\n`;
+      if (p.blockers) md += `- **Blockers:** ${p.blockers}\n`;
       md += '\n';
     }
   }
 
-  // Retro: İyi/Kötü/İyileştirme
-  md += renderList('😊 İyi Gidenler', analysis.iyi_gidenler);
-  md += renderList('😟 Kötü Gidenler', analysis.kotu_gidenler);
-  md += renderList('💡 İyileştirmeler', analysis.iyilestirmeler);
+  // Retro: Went Well / Went Wrong / Improvements
+  md += renderList('😊 Went Well', analysis.went_well);
+  md += renderList('😟 Went Wrong', analysis.went_wrong);
+  md += renderList('💡 Improvements', analysis.improvements);
 
-  // Decision: Gündem + detaylı kararlar
-  md += renderList('📋 Gündem Maddeleri', analysis.gundem_maddeleri);
+  // Decision: Agenda + detailed decisions
+  md += renderList('📋 Agenda Items', analysis.agenda_items);
 
-  if (analysis.kararlar?.length > 0) {
-    md += '\n---\n\n## ⚖️ Alınan Kararlar\n\n';
-    for (const karar of analysis.kararlar) {
-      if (typeof karar === 'string') {
-        md += `- ${karar}\n`;
+  if (analysis.decisions?.length > 0) {
+    md += '\n---\n\n## ⚖️ Decisions\n\n';
+    for (const d of analysis.decisions) {
+      if (typeof d === 'string') {
+        md += `- ${d}\n`;
       } else {
-        md += `- **${karar.karar}**`;
-        if (karar.gerekce) md += `\n  - Gerekçe: ${karar.gerekce}`;
-        if (karar.sorumlu) md += `\n  - Sorumlu: ${karar.sorumlu}`;
+        md += `- **${d.decision}**`;
+        if (d.rationale) md += `\n  - Rationale: ${d.rationale}`;
+        if (d.owner) md += `\n  - Owner: ${d.owner}`;
         md += '\n';
       }
     }
   }
 
-  md += renderList('⏳ Ertelenen Konular', analysis.ertelenen_konular);
+  md += renderList('⏳ Deferred Items', analysis.deferred_items);
 
-  // Aksiyon maddeleri (tüm şablonlarda var)
-  if (analysis.aksiyonlar?.length > 0) {
-    md += '\n---\n\n## ✅ Aksiyon Maddeleri\n\n';
-    for (const aksiyon of analysis.aksiyonlar) {
-      const sahip = aksiyon.sahip ? ` → ${aksiyon.sahip}` : '';
-      md += `- [ ] ${aksiyon.madde}${sahip}\n`;
+  // Action items (present in all templates)
+  if (analysis.action_items?.length > 0) {
+    md += '\n---\n\n## ✅ Action Items\n\n';
+    for (const a of analysis.action_items) {
+      const owner = a.owner ? ` → ${a.owner}` : '';
+      md += `- [ ] ${a.item}${owner}\n`;
     }
   }
 
-  // 1:1: Geri bildirimler, gelişim, sonraki konular
-  md += renderList('💬 Geri Bildirimler', analysis.geri_bildirimler);
-  md += renderList('📈 Gelişim Alanları', analysis.gelisim_alanlari);
-  md += renderList('📅 Sonraki Görüşme Konuları', analysis.sonraki_gorusme_konulari);
+  // 1:1: Feedback, growth areas, next topics
+  md += renderList('💬 Feedback', analysis.feedback);
+  md += renderList('📈 Growth Areas', analysis.growth_areas);
+  md += renderList('📅 Next Meeting Topics', analysis.next_meeting_topics);
 
   return md;
 }
 
 /**
- * Basit metin bölümü
+ * Simple text section
  */
 function renderSection(title, content) {
   if (!content) return '';
@@ -115,7 +115,7 @@ function renderSection(title, content) {
 }
 
 /**
- * Liste bölümü (boşsa göstermez)
+ * List section (hidden if empty)
  */
 function renderList(title, items) {
   if (!items || items.length === 0) return '';
@@ -127,30 +127,30 @@ function renderList(title, items) {
 }
 
 /**
- * Markdown dosyasını diske kaydet
+ * Save Markdown file to disk
  */
 export function saveMarkdown(content, outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });
-  const filename = `toplanti_${getTimestamp()}.md`;
+  const filename = `meeting_${getTimestamp()}.md`;
   const filePath = path.join(outputDir, filename);
   fs.writeFileSync(filePath, content, 'utf-8');
   return filePath;
 }
 
 /**
- * Markdown → HTML dönüşümü ve kaydetme
+ * Markdown → HTML conversion and save
  */
 export function saveHtml(markdownContent, outputDir) {
   fs.mkdirSync(outputDir, { recursive: true });
-  const filename = `toplanti_${getTimestamp()}.html`;
+  const filename = `meeting_${getTimestamp()}.html`;
   const filePath = path.join(outputDir, filename);
 
   const html = `<!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Toplantı Notu</title>
+  <title>Meeting Notes</title>
   <style>
     :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --border: #30363d; --green: #3fb950; --yellow: #d29922; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
@@ -176,7 +176,7 @@ ${markdownToHtml(markdownContent)}
 }
 
 /**
- * Basit Markdown → HTML dönüştürücü
+ * Simple Markdown → HTML converter
  */
 function markdownToHtml(md) {
   return md
@@ -194,7 +194,7 @@ function markdownToHtml(md) {
 }
 
 /**
- * Dosya adı için timestamp
+ * Timestamp for filenames
  */
 function getTimestamp() {
   return new Date().toISOString()
@@ -203,13 +203,13 @@ function getTimestamp() {
 }
 
 /**
- * Türkçe tarih formatı: 15.01.2025 14:30
+ * Date format: 2025-01-15 14:30
  */
-function formatDateTR(date) {
-  const d = date.getDate().toString().padStart(2, '0');
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+function formatDate(date) {
   const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
   const h = date.getHours().toString().padStart(2, '0');
   const min = date.getMinutes().toString().padStart(2, '0');
-  return `${d}.${m}.${y} ${h}:${min}`;
+  return `${y}-${m}-${d} ${h}:${min}`;
 }

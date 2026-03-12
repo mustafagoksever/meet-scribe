@@ -9,7 +9,7 @@ import { exitIfNoFfmpeg, addWavHeader, calculateRMS, formatTime, printBanner } f
 import { detectAudioDevice } from '../audio-detect.js';
 import { sendNotifications } from '../notify.js';
 
-// Konuşmacı renkleri — sınırsız konuşmacı desteği, renkler döngüsel
+// Speaker colors — unlimited speaker support, colors cycle
 const SPEAKER_COLORS = [
   chalk.cyan.bold,
   chalk.green.bold,
@@ -25,13 +25,13 @@ const SPEAKER_COLORS = [
 
 function getSpeaker(index) {
   return {
-    label: `K${index}`,
+    label: `S${index}`,
     color: SPEAKER_COLORS[index % SPEAKER_COLORS.length],
   };
 }
 
 /**
- * Mikrofon + sistem sesi kaydı (ffmpeg loopback ile)
+ * Record mic + system audio (ffmpeg loopback)
  */
 export async function handleRecord(opts) {
   const config = resolveConfig(opts);
@@ -39,21 +39,21 @@ export async function handleRecord(opts) {
   const startTime = new Date();
 
   exitIfNoFfmpeg();
-  printBanner('Toplantı Kaydı');
+  printBanner('Meeting Recording');
 
   const audioArgs = detectAudioDevice();
   if (!audioArgs) process.exit(1);
 
-  console.log(chalk.green(`✓ Ses kaynağı: ${audioArgs.deviceName}`));
-  console.log(chalk.dim(`  Chunk: ${chunkDuration}s | Model: ${config.sttModel} | Şablon: ${config.template}`));
-  console.log(chalk.dim(`  Durdurmak: Ctrl+C | Duraklatma: Space\n`));
+  console.log(chalk.green(`✓ Audio source: ${audioArgs.deviceName}`));
+  console.log(chalk.dim(`  Chunk: ${chunkDuration}s | Model: ${config.sttModel} | Template: ${config.template}`));
+  console.log(chalk.dim(`  Stop: Ctrl+C | Pause: Space\n`));
 
   const recorder = new AudioRecorder(config, audioArgs, chunkDuration, startTime);
   recorder.start();
 }
 
 /**
- * Ses kaydı yönetici sınıfı
+ * Audio recording manager class
  */
 class AudioRecorder {
   constructor(config, audioArgs, chunkDuration, startTime) {
@@ -79,12 +79,12 @@ class AudioRecorder {
     this._registerKeypress();
   }
 
-  // ── ffmpeg süreci ──────────────────────
+  // ── ffmpeg process ─────────────────────
 
   _spawnFfmpeg() {
     const args = [...this.audioArgs.args];
 
-    // Gürültü filtreleme
+    // Noise filtering
     if (this.config.noiseFilter) {
       args.push('-af', 'highpass=f=80,lowpass=f=8000,anlmdn=s=7:p=0.002:r=0.015');
     }
@@ -103,7 +103,7 @@ class AudioRecorder {
     this.ffmpeg.stderr.on('data', (d) => { stderr += d.toString(); });
 
     this.ffmpeg.on('error', (err) => {
-      console.error(chalk.red(`\n✖ ffmpeg başlatılamadı: ${err.message}`));
+      console.error(chalk.red(`\n✖ Could not start ffmpeg: ${err.message}`));
       if (stderr) console.error(chalk.dim(stderr.slice(-500)));
       process.exit(1);
     });
@@ -112,7 +112,7 @@ class AudioRecorder {
   }
 
   _onAudioData(data) {
-    if (this.isPaused) return; // Duraklatıldıysa buffer'a ekleme
+    if (this.isPaused) return; // Skip buffering when paused
 
     if (!this.headerSkipped) {
       this.headerBuffer = Buffer.concat([this.headerBuffer, data]);
@@ -135,13 +135,13 @@ class AudioRecorder {
       process.stdin.setRawMode(true);
       process.stdin.resume();
       process.stdin.on('data', (key) => {
-        // Space = durakla/devam
+        // Space = pause/resume
         if (key.toString() === ' ') {
           this.isPaused = !this.isPaused;
           if (this.isPaused) {
-            console.log(chalk.yellow('\n⏸  Duraklatıldı — Space ile devam et'));
+            console.log(chalk.yellow('\n⏸  Paused — press Space to resume'));
           } else {
-            console.log(chalk.green('▶  Devam ediliyor...\n'));
+            console.log(chalk.green('▶  Resuming...\n'));
           }
         }
         // Ctrl+C
@@ -152,7 +152,7 @@ class AudioRecorder {
     }
   }
 
-  // ── Chunk zamanlayıcı ──────────────────
+  // ── Chunk timer ────────────────────────
 
   _startChunkTimer() {
     this.chunkInterval = setInterval(async () => {
@@ -167,7 +167,7 @@ class AudioRecorder {
     }, this.chunkDuration * 1000);
   }
 
-  // ── Chunk işleme ───────────────────────
+  // ── Chunk processing ───────────────────
 
   async _processChunk(rawBuffer) {
     const wavBuffer = addWavHeader(rawBuffer);
@@ -175,12 +175,12 @@ class AudioRecorder {
     const time = formatTime(this.chunkStartTime);
 
     if (rms < 0.005) {
-      console.log(chalk.dim(`  [${time}] (sessiz - atlanıyor)`));
+      console.log(chalk.dim(`  [${time}] (silence — skipping)`));
       return;
     }
 
     const spinner = ora({
-      text: chalk.dim(`[${time}] Transkript ediliyor...`),
+      text: chalk.dim(`[${time}] Transcribing...`),
       color: 'yellow',
     }).start();
 
@@ -189,7 +189,7 @@ class AudioRecorder {
 
       if (!text?.trim()) {
         spinner.stop();
-        console.log(chalk.dim(`  [${time}] (boş transkript)`));
+        console.log(chalk.dim(`  [${time}] (empty transcript)`));
         return;
       }
 
@@ -205,7 +205,7 @@ class AudioRecorder {
         chalk.white(text)
       );
     } catch (err) {
-      spinner.fail(`STT hatası: ${err.message}`);
+      spinner.fail(`STT error: ${err.message}`);
     }
   }
 
@@ -227,7 +227,7 @@ class AudioRecorder {
       process.stdin.setRawMode(false);
     }
 
-    console.log(chalk.yellow('\n\n⏹  Kayıt durduruluyor...'));
+    console.log(chalk.yellow('\n\n⏹  Stopping recording...'));
 
     this.ffmpeg.stdin.write('q');
     this.ffmpeg.kill('SIGTERM');
@@ -244,19 +244,19 @@ class AudioRecorder {
     const { transcriptLines, config, startTime } = this;
 
     if (transcriptLines.length === 0) {
-      console.log(chalk.yellow('\n⚠ Transkript boş, dosya kaydedilmedi.'));
+      console.log(chalk.yellow('\n⚠ Transcript is empty, no file saved.'));
       return;
     }
 
-    // LLM özet
+    // LLM summary
     let analysis = null;
     if (config.summary) {
-      const spinner = ora({ text: 'LLM ile özet oluşturuluyor...', color: 'cyan' }).start();
+      const spinner = ora({ text: 'Generating summary with LLM...', color: 'cyan' }).start();
       try {
         analysis = await summarizeTranscript(transcriptLines.join('\n'), config);
-        spinner.succeed('Özet oluşturuldu');
+        spinner.succeed('Summary generated');
       } catch (err) {
-        spinner.fail(`Özet hatası: ${err.message}`);
+        spinner.fail(`Summary error: ${err.message}`);
       }
     }
 
@@ -264,7 +264,7 @@ class AudioRecorder {
     const savedPath = saveMarkdown(markdown, config.output);
 
     const icon = analysis ? '✓' : '⚠';
-    const label = analysis ? 'Rapor kaydedildi' : 'Transkript kaydedildi (özetlenmedi)';
+    const label = analysis ? 'Report saved' : 'Transcript saved (no summary)';
     const color = analysis ? chalk.green : chalk.yellow;
     console.log(color(`\n${icon} ${label}: ${chalk.bold(savedPath)}`));
 
@@ -274,9 +274,9 @@ class AudioRecorder {
       console.log(chalk.green(`✓ HTML: ${chalk.bold(htmlPath)}`));
     }
 
-    // Bildirimler (Zulip / Webhook)
+    // Notifications (Zulip / Webhook)
     if (config.zulipUrl || config.webhook) {
-      const spinner = ora({ text: 'Bildirimler gönderiliyor...', color: 'cyan' }).start();
+      const spinner = ora({ text: 'Sending notifications...', color: 'cyan' }).start();
       try {
         await sendNotifications(config, analysis, markdown);
         spinner.stop();

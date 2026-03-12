@@ -2,8 +2,8 @@ import fetch from 'node-fetch';
 import { getTemplate } from './templates.js';
 
 /**
- * LLM ile toplantı transkriptini analiz et
- * Template desteği ile farklı toplantı türleri için farklı prompt kullanır.
+ * Analyze meeting transcript with LLM
+ * Uses template system to apply different prompts for different meeting types.
  */
 export async function summarizeTranscript(transcript, config) {
   const template = getTemplate(config.template || 'default');
@@ -13,7 +13,7 @@ export async function summarizeTranscript(transcript, config) {
     model: config.llmModel,
     messages: [
       { role: 'system', content: template.systemPrompt },
-      { role: 'user', content: `Aşağıdaki toplantı transkriptini analiz et:\n\n${transcript}` },
+      { role: 'user', content: `Analyze the following meeting transcript:\n\n${transcript}` },
     ],
     temperature: 0.3,
     response_format: { type: 'json_object' },
@@ -30,7 +30,7 @@ export async function summarizeTranscript(transcript, config) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`LLM API hatası (${response.status}): ${errorText}`);
+    throw new Error(`LLM API error (${response.status}): ${errorText}`);
   }
 
   const data = await response.json();
@@ -39,14 +39,14 @@ export async function summarizeTranscript(transcript, config) {
   try {
     return JSON.parse(content);
   } catch {
-    // JSON parse hata verirse ham metni özet alanına koy
+    // If JSON parsing fails, put raw text in summary field
     return {
-      ozet: content,
-      ana_konular: [],
-      aksiyonlar: [],
-      kararlar: [],
-      ton: 'nötr',
-      tahmini_sure_dk: 0,
+      summary: content,
+      key_topics: [],
+      action_items: [],
+      decisions: [],
+      tone: 'neutral',
+      estimated_duration_min: 0,
     };
   }
 }

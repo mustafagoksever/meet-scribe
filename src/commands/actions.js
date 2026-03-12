@@ -3,24 +3,24 @@ import path from 'path';
 import chalk from 'chalk';
 
 /**
- * meet-scribe actions — tamamlanmamış aksiyon maddelerini listele
+ * meet-scribe actions — list open action items
  */
 export async function handleActions(opts) {
   const outputDir = opts.output || './meet-scribe-output';
   const resolvedDir = path.resolve(outputDir);
 
   if (!fs.existsSync(resolvedDir)) {
-    console.log(chalk.yellow(`\n⚠ Çıktı dizini bulunamadı: ${resolvedDir}\n`));
+    console.log(chalk.yellow(`\n⚠ Output directory not found: ${resolvedDir}\n`));
     return;
   }
 
   const files = fs.readdirSync(resolvedDir)
-    .filter(f => f.startsWith('toplanti_') && f.endsWith('.md'))
+    .filter(f => f.startsWith('meeting_') && f.endsWith('.md'))
     .sort()
     .reverse();
 
   if (files.length === 0) {
-    console.log(chalk.yellow('\n⚠ Toplantı dosyası bulunamadı.\n'));
+    console.log(chalk.yellow('\n⚠ No meeting files found.\n'));
     return;
   }
 
@@ -31,11 +31,10 @@ export async function handleActions(opts) {
     const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
 
-    // Tarih bilgisi
-    const dateMatch = content.match(/\*\*Tarih:\*\*\s*(.+)/);
+    const dateMatch = content.match(/\*\*Date:\*\*\s*(.+)/);
     const date = dateMatch ? dateMatch[1].trim() : file;
 
-    // Tamamlanmamış aksiyonları bul: - [ ]
+    // Find open action items: - [ ]
     for (const line of lines) {
       const match = line.match(/^- \[ \]\s+(.+)/);
       if (match) {
@@ -43,8 +42,8 @@ export async function handleActions(opts) {
         const ownerMatch = text.match(/(.+?)\s*→\s*(.+)/);
 
         allActions.push({
-          madde: ownerMatch ? ownerMatch[1].trim() : text,
-          sahip: ownerMatch ? ownerMatch[2].trim() : null,
+          item: ownerMatch ? ownerMatch[1].trim() : text,
+          owner: ownerMatch ? ownerMatch[2].trim() : null,
           date,
           file,
         });
@@ -52,7 +51,7 @@ export async function handleActions(opts) {
     }
   }
 
-  // Tamamlanmış aksiyonları say: - [x]
+  // Count completed actions: - [x]
   let completedCount = 0;
   for (const file of files) {
     const content = fs.readFileSync(path.join(resolvedDir, file), 'utf-8');
@@ -61,17 +60,17 @@ export async function handleActions(opts) {
   }
 
   if (allActions.length === 0) {
-    console.log(chalk.green('\n✓ Tüm aksiyon maddeleri tamamlanmış! 🎉\n'));
+    console.log(chalk.green('\n✓ All action items completed! 🎉\n'));
     return;
   }
 
-  console.log(chalk.bold.blue(`\n📋 Açık Aksiyon Maddeleri (${allActions.length} açık, ${completedCount} tamamlanmış)\n`));
+  console.log(chalk.bold.blue(`\n📋 Open Action Items (${allActions.length} open, ${completedCount} completed)\n`));
   console.log(chalk.dim('─'.repeat(60)));
 
-  // Kişiye göre grupla
+  // Group by owner
   const byOwner = {};
   for (const action of allActions) {
-    const key = action.sahip || '(atanmamış)';
+    const key = action.owner || '(unassigned)';
     if (!byOwner[key]) byOwner[key] = [];
     byOwner[key].push(action);
   }
@@ -82,12 +81,12 @@ export async function handleActions(opts) {
     for (const action of actions) {
       console.log(
         chalk.red('  ☐ ') +
-        chalk.white(action.madde) +
+        chalk.white(action.item) +
         chalk.dim(` (${action.date})`)
       );
     }
   }
 
   console.log(chalk.dim('\n' + '─'.repeat(60)));
-  console.log(chalk.dim(`  Açık: ${allActions.length} | Tamamlanmış: ${completedCount}\n`));
+  console.log(chalk.dim(`  Open: ${allActions.length} | Completed: ${completedCount}\n`));
 }

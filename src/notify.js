@@ -2,16 +2,16 @@ import fetch from 'node-fetch';
 import chalk from 'chalk';
 
 /**
- * Zulip'e mesaj gönder
+ * Send message to Zulip
  */
 export async function sendToZulip(config, content) {
   if (!config.zulipUrl || !config.zulipEmail || !config.zulipApiKey) {
-    throw new Error('Zulip ayarları eksik. zulipUrl, zulipEmail ve zulipApiKey gerekli.');
+    throw new Error('Zulip config incomplete. zulipUrl, zulipEmail, and zulipApiKey are required.');
   }
 
   const url = `${config.zulipUrl.replace(/\/+$/, '')}/api/v1/messages`;
   const stream = config.zulipStream || 'general';
-  const topic = config.zulipTopic || 'Toplantı Notları';
+  const topic = config.zulipTopic || 'Meeting Notes';
 
   const body = new URLSearchParams({
     type: 'stream',
@@ -33,14 +33,14 @@ export async function sendToZulip(config, content) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Zulip API hatası (${response.status}): ${errorText}`);
+    throw new Error(`Zulip API error (${response.status}): ${errorText}`);
   }
 
   return await response.json();
 }
 
 /**
- * Generic webhook'a POST gönder
+ * Send generic webhook POST
  */
 export async function sendToWebhook(webhookUrl, payload) {
   const response = await fetch(webhookUrl, {
@@ -51,14 +51,14 @@ export async function sendToWebhook(webhookUrl, payload) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Webhook hatası (${response.status}): ${errorText}`);
+    throw new Error(`Webhook error (${response.status}): ${errorText}`);
   }
 
   return true;
 }
 
 /**
- * Toplantı sonuçlarını bildirim olarak gönder (Zulip ve/veya webhook)
+ * Send meeting results as notifications (Zulip and/or webhook)
  */
 export async function sendNotifications(config, analysis, markdownContent) {
   const results = [];
@@ -68,10 +68,10 @@ export async function sendNotifications(config, analysis, markdownContent) {
     try {
       const zulipContent = formatForZulip(analysis);
       await sendToZulip(config, zulipContent);
-      console.log(chalk.green('✓ Zulip mesajı gönderildi'));
+      console.log(chalk.green('✓ Zulip message sent'));
       results.push({ type: 'zulip', success: true });
     } catch (err) {
-      console.error(chalk.yellow(`⚠ Zulip hatası: ${err.message}`));
+      console.error(chalk.yellow(`⚠ Zulip error: ${err.message}`));
       results.push({ type: 'zulip', success: false, error: err.message });
     }
   }
@@ -86,10 +86,10 @@ export async function sendNotifications(config, analysis, markdownContent) {
         markdown: markdownContent,
       };
       await sendToWebhook(config.webhook, payload);
-      console.log(chalk.green('✓ Webhook gönderildi'));
+      console.log(chalk.green('✓ Webhook sent'));
       results.push({ type: 'webhook', success: true });
     } catch (err) {
-      console.error(chalk.yellow(`⚠ Webhook hatası: ${err.message}`));
+      console.error(chalk.yellow(`⚠ Webhook error: ${err.message}`));
       results.push({ type: 'webhook', success: false, error: err.message });
     }
   }
@@ -98,39 +98,39 @@ export async function sendNotifications(config, analysis, markdownContent) {
 }
 
 /**
- * Zulip için formatlı mesaj oluştur
+ * Format analysis for Zulip message
  */
 function formatForZulip(analysis) {
-  if (!analysis) return '📝 Yeni toplantı transkripti kaydedildi (özet oluşturulamadı).';
+  if (!analysis) return '📝 New meeting transcript saved (no summary generated).';
 
-  let msg = `## 📝 Toplantı Özeti\n\n`;
-  msg += `${analysis.ozet || 'Özet yok'}\n\n`;
+  let msg = `## 📝 Meeting Summary\n\n`;
+  msg += `${analysis.summary || 'No summary available'}\n\n`;
 
-  if (analysis.ton) {
-    msg += `**Ton:** ${analysis.ton}\n\n`;
+  if (analysis.tone) {
+    msg += `**Tone:** ${analysis.tone}\n\n`;
   }
 
-  if (analysis.ana_konular?.length > 0) {
-    msg += `### 🗂 Ana Konular\n`;
-    for (const konu of analysis.ana_konular) {
-      msg += `- ${konu}\n`;
+  if (analysis.key_topics?.length > 0) {
+    msg += `### 🗂 Key Topics\n`;
+    for (const t of analysis.key_topics) {
+      msg += `- ${t}\n`;
     }
     msg += '\n';
   }
 
-  if (analysis.aksiyonlar?.length > 0) {
-    msg += `### ✅ Aksiyon Maddeleri\n`;
-    for (const a of analysis.aksiyonlar) {
-      const sahip = a.sahip ? ` → **${a.sahip}**` : '';
-      msg += `- [ ] ${a.madde}${sahip}\n`;
+  if (analysis.action_items?.length > 0) {
+    msg += `### ✅ Action Items\n`;
+    for (const a of analysis.action_items) {
+      const owner = a.owner ? ` → **${a.owner}**` : '';
+      msg += `- [ ] ${a.item}${owner}\n`;
     }
     msg += '\n';
   }
 
-  if (analysis.kararlar?.length > 0) {
-    msg += `### ⚖️ Kararlar\n`;
-    for (const k of analysis.kararlar) {
-      const text = typeof k === 'string' ? k : k.karar;
+  if (analysis.decisions?.length > 0) {
+    msg += `### ⚖️ Decisions\n`;
+    for (const d of analysis.decisions) {
+      const text = typeof d === 'string' ? d : d.decision;
       msg += `- ${text}\n`;
     }
   }

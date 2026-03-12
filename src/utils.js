@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { execSync } from 'child_process';
 
 /**
- * ffmpeg kurulu mu kontrol et
+ * Check if ffmpeg is installed
  */
 export function checkFfmpeg() {
   try {
@@ -14,22 +14,22 @@ export function checkFfmpeg() {
 }
 
 /**
- * ffmpeg bulunamadı hatası göster ve çık
+ * Show ffmpeg not found error and exit
  */
 export function exitIfNoFfmpeg() {
   if (!checkFfmpeg()) {
-    console.error(chalk.red('\n✖ ffmpeg bulunamadı!\n'));
-    console.error(chalk.yellow('Kurulum:\n'));
+    console.error(chalk.red('\n✖ ffmpeg not found!\n'));
+    console.error(chalk.yellow('Install it:\n'));
     console.error(chalk.dim('  macOS:   ') + chalk.white('brew install ffmpeg'));
     console.error(chalk.dim('  Ubuntu:  ') + chalk.white('sudo apt install ffmpeg'));
-    console.error(chalk.dim('  Windows: ') + chalk.white('choco install ffmpeg  veya  winget install ffmpeg'));
+    console.error(chalk.dim('  Windows: ') + chalk.white('choco install ffmpeg  or  winget install ffmpeg'));
     console.error();
     process.exit(1);
   }
 }
 
 /**
- * Raw PCM buffer'ına WAV header ekle (44 byte)
+ * Add WAV header (44 bytes) to raw PCM buffer
  */
 export function addWavHeader(pcmBuffer, sampleRate = 16000, channels = 1, bitsPerSample = 16) {
   const byteRate = sampleRate * channels * (bitsPerSample / 8);
@@ -59,7 +59,7 @@ export function addWavHeader(pcmBuffer, sampleRate = 16000, channels = 1, bitsPe
 }
 
 /**
- * 16-bit PCM buffer'ın RMS (ses seviyesi) değerini hesapla
+ * Calculate RMS (volume level) of a 16-bit PCM buffer
  */
 export function calculateRMS(buffer) {
   if (buffer.length < 2) return 0;
@@ -76,7 +76,7 @@ export function calculateRMS(buffer) {
 }
 
 /**
- * Saniye → [MM:SS] formatı
+ * Seconds → [MM:SS] format
  */
 export function formatTime(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -85,14 +85,14 @@ export function formatTime(seconds) {
 }
 
 /**
- * Separator çizgisi yazdır
+ * Print separator line
  */
 export function printSeparator(length = 50) {
   console.log(chalk.dim('─'.repeat(length)));
 }
 
 /**
- * Başlık banner yazdır
+ * Print title banner
  */
 export function printBanner(title) {
   console.log(chalk.bold.blue(`\n🎙  MeetScribe - ${title}`));

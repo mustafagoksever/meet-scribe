@@ -1,55 +1,56 @@
 # MeetScribe 🎙
 
-Toplantı sesini kayıt eden, Whisper API ile transkript eden, LLM ile özetleyen ve Markdown dosyası üreten CLI aracı.
+CLI tool that records meetings, transcribes with Whisper API, summarizes with LLM, and generates Markdown.
 
-## ⚡ Özellikler
+## ⚡ Features
 
-- **Gerçek zamanlı kayıt** — Mikrofon + sistem sesini yakalar, canlı transkript
-- **Otomatik ses tespiti** — Platform bazlı loopback cihazını otomatik bulur
-- **Pause/Resume** — Space tuşu ile kayıt duraklatma
-- **Whisper STT** — OpenAI-compatible Whisper API ile konuşmayı metne çevirir
-- **Otomatik dil tespiti** — Whisper dili kendisi tespit eder (veya elle belirt)
-- **5 toplantı şablonu** — Default, standup, retro, karar, 1:1 görüşme
-- **LLM analiz** — Özet, aksiyonlar, kararlar, ton analizi
-- **Markdown + HTML çıktı** — Profesyonel toplantı notu formatında
-- **Zulip / Webhook** — Toplantı sonrası otomatik bildirim
-- **Toplantı geçmişi** — Arama, listeleme, aksiyon takibi
-- **Gürültü filtreleme** — ffmpeg ile noise gate
+- **Real-time recording** — Captures mic + system audio, live transcription
+- **Auto device detection** — Automatically finds loopback audio per platform
+- **Pause/Resume** — Press Space to pause recording
+- **Whisper STT** — Transcribes speech using OpenAI-compatible Whisper API
+- **Auto language detection** — Whisper detects language automatically (or set manually)
+- **5 meeting templates** — General, standup, retro, decision, 1:1
+- **LLM analysis** — Summary, action items, decisions, tone analysis
+- **Markdown + HTML output** — Professional meeting notes format
+- **Zulip / Webhook** — Auto-notify after meeting ends
+- **Meeting history** — Search, list, and track action items
+- **Noise filtering** — ffmpeg noise gate for cleaner audio
+- **Unlimited speakers** — 10 color-coded speaker labels, cycling
 
-## 📋 Gereksinimler
+## 📋 Requirements
 
 - **Node.js** 20+
-- **ffmpeg** (ses kaydı ve büyük dosya parçalama için)
+- **ffmpeg** (for audio recording and large file splitting)
 
-### ffmpeg Kurulumu
+### Installing ffmpeg
 
-| Platform | Komut |
-|----------|-------|
+| Platform | Command |
+|----------|---------|
 | macOS | `brew install ffmpeg` |
 | Ubuntu | `sudo apt install ffmpeg` |
-| Windows | `choco install ffmpeg` veya `winget install ffmpeg` |
+| Windows | `choco install ffmpeg` or `winget install ffmpeg` |
 
-### 🔊 Tüm Sesleri Yakalamak İçin (Toplantı Katılımcıları Dahil)
+### 🔊 Capturing All Audio (Including Meeting Participants)
 
-MeetScribe sadece mikrofon sesi değil, **bilgisayardan çıkan tüm sesleri** (toplantıdaki diğer kişiler dahil) yakalayabilir. Bunun için aşağıdaki ayarlardan birini yapmanız gerekir.
+MeetScribe can capture **all audio from your computer** (including other meeting participants), not just your microphone. Set up one of the following:
 
-MeetScribe otomatik olarak loopback cihazını arar. Bulamazsa sadece mikrofonu kullanır ve sizi uyarır.
-
----
-
-#### 🎛 Stereo Mix Nedir?
-
-**Stereo Mix**, Windows'ta yerleşik olarak gelen sanal bir ses cihazıdır. Bilgisayarınızın hoparlör/kulaklığından çıkan tüm sesleri bir "kayıt cihazı" olarak sunar. Böylece:
-
-- 🎧 Toplantıdaki diğer katılımcıların sesleri yakalanır
-- 🎤 Bazı sürücülerde mikrofon sesi de otomatik dahil olur
-- ⚙️ Ekstra yazılım kurmaya gerek yoktur
-
-> ⚠️ Stereo Mix tüm bilgisayarlarda varsayılan olarak aktif değildir. Bazı ses kartı sürücüleri (özellikle Realtek) bu özelliği gizler.
+MeetScribe automatically searches for a loopback device. If none is found, it falls back to microphone-only and warns you.
 
 ---
 
-#### Windows Kurulumu (Yöntem 1: Stereo Mix)
+#### 🎛 What is Stereo Mix?
+
+**Stereo Mix** is a built-in virtual audio device on Windows. It presents all audio going to your speakers/headphones as a "recording device". This means:
+
+- 🎧 Other participants' voices are captured
+- 🎤 Some drivers also include microphone audio
+- ⚙️ No extra software needed
+
+> ⚠️ Stereo Mix is not enabled by default on all computers. Some audio drivers (especially Realtek) hide this feature.
+
+---
+
+#### Windows Setup (Method 1: Stereo Mix)
 
 1. Right-click the **🔊 speaker icon** in the taskbar → **Sound settings**
 2. Scroll down → click **More sound settings**
@@ -59,18 +60,18 @@ MeetScribe otomatik olarak loopback cihazını arar. Bulamazsa sadece mikrofonu 
 6. Right-click **Stereo Mix** again → **Set as Default Device**
 7. Click **OK**
 
-MeetScribe çalıştığında `✓ Ses kaynağı: Stereo Mix` mesajını göreceksiniz.
+You should see `✓ Audio source: Stereo Mix` when MeetScribe starts.
 
 ---
 
-#### Windows Kurulumu (Yöntem 2: VB-Cable — Stereo Mix Yoksa)
+#### Windows Setup (Method 2: VB-Cable — If No Stereo Mix)
 
-1. https://vb-audio.com/Cable/ → **Download** → Kur → PC'yi **restart** et
+1. https://vb-audio.com/Cable/ → **Download** → Install → **Restart** PC
 2. Open **Sound settings** → **More sound settings**
 3. **Playback** tab → **CABLE Input** → Right-click → **Set as Default Device**
 4. **Recording** tab → **CABLE Output** → Right-click → **Set as Default Device**
 
-**Kendi sesinizi de dahil etmek için (opsiyonel):**
+**To include your own voice (optional):**
 1. **Recording** tab → **Microphone** → Right-click → **Properties**
 2. **Listen** tab → ✅ check **"Listen to this device"**
 3. **"Playback through this device"** → select **CABLE Input**
@@ -78,55 +79,42 @@ MeetScribe çalıştığında `✓ Ses kaynağı: Stereo Mix` mesajını görece
 
 ---
 
-#### macOS Kurulumu
+#### macOS Setup
 
-1. [BlackHole](https://github.com/ExistentialAudio/BlackHole) kur: `brew install blackhole-2ch`
+1. Install [BlackHole](https://github.com/ExistentialAudio/BlackHole): `brew install blackhole-2ch`
 2. System Settings → Sound → Create Multi-Output Device
 
 #### Linux
 
-PulseAudio monitor kaynağı otomatik tespit edilir. Ek kurulum gerektirmez.
+PulseAudio monitor source is auto-detected. No extra setup needed.
 
 ---
 
-## 🚀 Kurulum
-
-### 1. Projeyi klonla veya indir
+## 🚀 Installation
 
 ```bash
-git clone <repo-url>
-cd asel-meet
-```
-
-### 2. Bağımlılıkları kur
-
-```bash
+git clone https://github.com/mustafagoksever/meet-scribe.git
+cd meet-scribe
 npm install
 ```
 
-Bu komut `package.json`'daki tüm bağımlılıkları (`commander`, `chalk`, `ora`, `node-fetch`, `form-data`) indirip `node_modules/` klasörüne kurar.
-
-### 3. Global komut olarak kaydet (opsiyonel)
+### Global install (optional)
 
 ```bash
 npm link
 ```
 
-Bu komut `meet-scribe`'ı sistem genelinde bir komut olarak kaydeder.
-
-### 4. Config dosyası oluştur
+### Create config file
 
 ```bash
 meet-scribe init
-# veya
-node bin/meet-scribe.js init
 ```
 
-`.meetscriberc` dosyası oluşturulur. API key ve diğer ayarlarınızı buraya girin.
+Edit `.meetscriberc` to set your API key and other preferences.
 
 ---
 
-## 🏃 Hızlı Başlatma
+## 🏃 Quick Start
 
 ```bash
 # Windows
@@ -136,150 +124,133 @@ run.bat record
 ./run.sh record
 ```
 
-Bu script'ler `node_modules` yoksa otomatik `npm install` çalıştırır.
+These scripts auto-install dependencies if `node_modules` is missing.
 
 ---
 
-## 📖 Kullanım
+## 📖 Usage
 
-### Toplantı Kaydı (Gerçek Zamanlı)
+### Record Meeting (Real-time)
 
 ```bash
-# Temel kullanım — Ctrl+C ile durdur, Space ile durakla
+# Basic — Ctrl+C to stop, Space to pause
 meet-scribe record --api-key sk-...
 
-# Şablonla
+# With template
 meet-scribe record --template standup
 meet-scribe record --template retro
 meet-scribe record --template decision
 meet-scribe record --template oneone
 
-# Gürültü filtreleme ile
+# With noise filtering
 meet-scribe record --noise-filter
 
-# HTML çıktı ile
+# HTML output
 meet-scribe record --format html
 ```
 
-### Mevcut Dosya Transkripsiyonu
+### Transcribe Existing File
 
 ```bash
-meet-scribe transcribe toplanti.mp3 --api-key sk-...
+meet-scribe transcribe recording.mp3 --api-key sk-...
 ```
 
-### Toplantı Geçmişi
+### Meeting History
 
 ```bash
-meet-scribe list                  # Son 10 toplantıyı listele
-meet-scribe list -n 20            # Son 20 toplantı
-meet-scribe search "bütçe"        # Toplantılarda arama
-meet-scribe actions               # Açık aksiyon maddelerini göster
+meet-scribe list                  # Last 10 meetings
+meet-scribe list -n 20            # Last 20 meetings
+meet-scribe search "budget"       # Search across meetings
+meet-scribe actions               # Show open action items
 ```
 
-### Şablonlar
+### Templates
 
 ```bash
-meet-scribe templates             # Kullanılabilir şablonları listele
+meet-scribe templates             # List available templates
 ```
 
-### Zulip Entegrasyonu
+### Zulip Integration
 
 ```bash
 meet-scribe record \
   --zulip-url https://chat.example.com \
   --zulip-email bot@example.com \
   --zulip-api-key abc123 \
-  --zulip-stream "toplanti-notlari" \
+  --zulip-stream "meeting-notes" \
   --zulip-topic "Sprint Planning"
 ```
 
-Veya `.meetscriberc` dosyasına ekleyin:
+Or add to `.meetscriberc`:
 
 ```json
 {
   "zulipUrl": "https://chat.example.com",
   "zulipEmail": "bot@example.com",
   "zulipApiKey": "abc123",
-  "zulipStream": "toplanti-notlari",
-  "zulipTopic": "Toplantı Notları"
+  "zulipStream": "meeting-notes",
+  "zulipTopic": "Meeting Notes"
 }
 ```
 
-### Webhook Entegrasyonu
+### Webhook Integration
 
 ```bash
 meet-scribe record --webhook https://hooks.example.com/meeting
 ```
 
-### Ortam Değişkenleri
+### Environment Variables
 
 ```bash
 export OPENAI_API_KEY=sk-...             # macOS/Linux
 set OPENAI_API_KEY=sk-...                # Windows cmd
 $env:OPENAI_API_KEY="sk-..."             # PowerShell
-
-# Opsiyonel
-export OPENAI_BASE_URL=https://api.example.com/v1
-export ZULIP_URL=https://chat.example.com
-export ZULIP_EMAIL=bot@example.com
-export ZULIP_API_KEY=abc123
 ```
 
-## ⚙️ CLI Seçenekleri
+## ⚙️ CLI Options
 
-| Seçenek | Açıklama | Varsayılan |
-|---------|----------|------------|
+| Option | Description | Default |
+|--------|-------------|---------|
 | `--api-key` | API key | `OPENAI_API_KEY` env |
 | `--base-url` | API base URL | `https://api.openai.com/v1` |
 | `--stt-model` | Whisper model | `whisper-1` |
 | `--llm-model` | LLM model | `gpt-4o-mini` |
-| `--language` | Dil kodu (`auto` = otomatik) | `auto` |
-| `--no-summary` | LLM özetini atla | — |
-| `--output` | Çıktı dizini | `./meet-scribe-output` |
-| `--chunk` | Chunk süresi (saniye) | `30` |
-| `--template` | Toplantı şablonu | `default` |
-| `--format` | Çıktı formatı: `md`, `html` | `md` |
+| `--language` | Language code (`auto` = auto-detect) | `auto` |
+| `--no-summary` | Skip LLM summary | — |
+| `--output` | Output directory | `./meet-scribe-output` |
+| `--chunk` | Chunk duration (seconds) | `30` |
+| `--template` | Meeting template | `default` |
+| `--format` | Output format: `md`, `html` | `md` |
 | `--webhook` | Webhook URL | — |
-| `--zulip-url` | Zulip sunucu URL | — |
+| `--zulip-url` | Zulip server URL | — |
 | `--zulip-email` | Zulip bot email | — |
 | `--zulip-api-key` | Zulip API key | — |
-| `--zulip-stream` | Zulip stream adı | — |
-| `--zulip-topic` | Zulip topic adı | — |
-| `--noise-filter` | Gürültü filtreleme | kapalı |
+| `--zulip-stream` | Zulip stream name | — |
+| `--zulip-topic` | Zulip topic name | — |
+| `--noise-filter` | Enable noise filtering | off |
 
-## 📋 Komutlar
+## 📋 Commands
 
-| Komut | Açıklama |
-|-------|----------|
-| `init` | Config dosyası (`.meetscriberc`) oluştur |
-| `record` | Ses kaydet + gerçek zamanlı transkript (Space=durakla) |
-| `transcribe <dosya>` | Mevcut ses dosyasını transkript et |
-| `list` | Son toplantıları listele |
-| `search <sorgu>` | Toplantılarda arama |
-| `actions` | Tamamlanmamış aksiyon maddelerini listele |
-| `templates` | Kullanılabilir şablonları göster |
+| Command | Description |
+|---------|-------------|
+| `init` | Create config file (`.meetscriberc`) |
+| `record` | Record + real-time transcription (Space=pause) |
+| `transcribe <file>` | Transcribe existing audio file |
+| `list` | List recent meetings |
+| `search <query>` | Search across meetings |
+| `actions` | List open action items |
+| `templates` | Show available templates |
 
-## 🗂 Toplantı Şablonları
+## 🗂 Meeting Templates
 
-| Şablon | Açıklama | Çıktı |
-|--------|----------|-------|
-| `default` | Genel toplantı | Özet, konular, aksiyonlar, kararlar |
-| `standup` | Daily standup | Katılımcı bazlı dün/bugün/engel |
-| `retro` | Retrospektif | İyi/kötü giden + iyileştirmeler |
-| `decision` | Karar toplantısı | Kararlar + gerekçeler + sorumlular |
-| `oneone` | 1:1 görüşme | Geri bildirim + gelişim alanları |
+| Template | Description | Output |
+|----------|-------------|--------|
+| `default` | General meeting | Summary, topics, actions, decisions |
+| `standup` | Daily standup | Per-participant yesterday/today/blockers |
+| `retro` | Retrospective | Went well / went wrong + improvements |
+| `decision` | Decision meeting | Decisions + rationale + owners |
+| `oneone` | 1:1 meeting | Feedback + growth areas |
 
-## 📁 Çıktı Formatı
-
-Çıktı dosyaları `./meet-scribe-output/` dizinine `toplanti_YYYY-MM-DDTHH-MM-SS.md` formatında kaydedilir.
-
-Her dosya şu bölümleri içerir:
-- 📝 **Transkript** — Zaman damgalı konuşma metni
-- 📌 **Özet** — 2-3 cümlelik toplantı özeti
-- 🗂 **Ana Konular** — Tartışılan konular
-- ✅ **Aksiyon Maddeleri** — Yapılacak işler ve sorumlular
-- ⚖️ **Alınan Kararlar** — Toplantıda alınan kararlar
-
-## 📄 Lisans
+## 📄 License
 
 MIT

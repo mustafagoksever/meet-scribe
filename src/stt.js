@@ -9,39 +9,38 @@ import { checkFfmpeg } from './utils.js';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 /**
- * Ses dosyasını Whisper API'ye gönderip transkript al
+ * Transcribe audio buffer (from recording chunks)
+ */
+export async function transcribeBuffer(wavBuffer, config, chunkIndex) {
+  const tmpDir = path.join(process.cwd(), '.tmp');
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  const tmpPath = path.join(tmpDir, `chunk_${chunkIndex}.wav`);
+  fs.writeFileSync(tmpPath, wavBuffer);
+
+  try {
+    const text = await sendToWhisper(tmpPath, config);
+    return text;
+  } finally {
+    try { fs.unlinkSync(tmpPath); } catch {}
+  }
+}
+
+/**
+ * Transcribe audio file (for transcribe command)
  */
 export async function transcribeAudio(filePath, config) {
   const stat = fs.statSync(filePath);
 
-  // 25MB üzeri dosyaları ffmpeg ile parçala
-  if (stat.size > MAX_FILE_SIZE) {
-    return await transcribeLargeFile(filePath, config);
+  if (stat.size <= MAX_FILE_SIZE) {
+    return await sendToWhisper(filePath, config);
   }
 
-  return await sendToWhisper(filePath, config);
+  return await transcribeLargeFile(filePath, config);
 }
 
 /**
- * Buffer'ı geçici dosyaya yazıp Whisper'a gönder
- */
-export async function transcribeBuffer(buffer, config, chunkIndex = 0) {
-  const tmpDir = path.join(config.output, '.tmp');
-  fs.mkdirSync(tmpDir, { recursive: true });
-
-  const tmpFile = path.join(tmpDir, `chunk_${chunkIndex}_${Date.now()}.wav`);
-  fs.writeFileSync(tmpFile, buffer);
-
-  try {
-    const result = await sendToWhisper(tmpFile, config);
-    return result;
-  } finally {
-    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
-  }
-}
-
-/**
- * Whisper API'ye multipart/form-data isteği gönder
+ * Send multipart/form-data request to Whisper API
  */
 async function sendToWhisper(filePath, config) {
   const form = new FormData();
@@ -49,7 +48,7 @@ async function sendToWhisper(filePath, config) {
   form.append('model', config.sttModel);
   form.append('response_format', 'text');
 
-  // 'auto' ise Whisper kendi tespit etsin
+  // If 'auto', let Whisper detect the language
   if (config.language && config.language !== 'auto') {
     form.append('language', config.language);
   }
@@ -67,7 +66,7 @@ async function sendToWhisper(filePath, config) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Whisper API hatası (${response.status}): ${errorText}`);
+    throw new Error(`Whisper API error (${response.status}): ${errorText}`);
   }
 
   const text = await response.text();
@@ -75,46 +74,45 @@ async function sendToWhisper(filePath, config) {
 }
 
 /**
- * 25MB üzeri dosyaları ffmpeg ile parçalayıp transkript et
+ * Split files over 25MB with ffmpeg and transcribe in parts
  */
 async function transcribeLargeFile(filePath, config) {
   if (!checkFfmpeg()) {
     throw new Error(
-      chalk.red('Dosya 25MB üzerinde, parçalamak için ffmpeg gerekli!\n') +
-      chalk.yellow('Kurulum:\n') +
+      chalk.red('File is over 25MB, ffmpeg is required to split it!\n') +
+      chalk.yellow('Install:\n') +
       chalk.dim('  macOS:   ') + chalk.white('brew install ffmpeg\n') +
       chalk.dim('  Ubuntu:  ') + chalk.white('sudo apt install ffmpeg\n') +
-      chalk.dim('  Windows: ') + chalk.white('choco install ffmpeg  veya  winget install ffmpeg')
+      chalk.dim('  Windows: ') + chalk.white('choco install ffmpeg  or  winget install ffmpeg')
     );
   }
 
-  const tmpDir = path.join(config.output, '.tmp_split');
+  const tmpDir = path.join(process.cwd(), '.tmp_split');
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  const chunkPattern = path.join(tmpDir, 'part_%03d.mp3');
+  // Split into 10-minute chunks
+  const pattern = path.join(tmpDir, 'part_%03d.wav');
+  execSync(`ffmpeg -i "${filePath}" -f segment -segment_time 600 -ar 16000 -ac 1 "${pattern}"`, {
+    stdio: 'pipe',
+  });
 
-  // 10 dakikalık parçalara böl
-  execSync(
-    `ffmpeg -y -i "${filePath}" -f segment -segment_time 600 -c copy "${chunkPattern}"`,
-    { stdio: 'pipe' }
-  );
-
-  const chunks = fs.readdirSync(tmpDir)
-    .filter(f => f.startsWith('part_'))
+  const parts = fs.readdirSync(tmpDir)
+    .filter(f => f.startsWith('part_') && f.endsWith('.wav'))
     .sort();
 
   let fullTranscript = '';
 
-  for (const chunk of chunks) {
-    const chunkPath = path.join(tmpDir, chunk);
-    const text = await sendToWhisper(chunkPath, config);
-    fullTranscript += text + ' ';
+  for (const part of parts) {
+    const partPath = path.join(tmpDir, part);
+    const text = await sendToWhisper(partPath, config);
+    fullTranscript += text + '\n';
   }
 
-  // Temizlik
-  try {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  } catch { /* ignore */ }
+  // Cleanup
+  for (const part of parts) {
+    try { fs.unlinkSync(path.join(tmpDir, part)); } catch {}
+  }
+  try { fs.rmdirSync(tmpDir); } catch {}
 
   return fullTranscript.trim();
 }

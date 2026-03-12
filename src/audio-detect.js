@@ -2,8 +2,8 @@ import { execSync } from 'child_process';
 import chalk from 'chalk';
 
 /**
- * Platform bazlı ses cihazı tespiti (loopback öncelikli)
- * Her platform için otomatik olarak en uygun ses kaynağını bulur.
+ * Platform-specific audio device detection (loopback preferred)
+ * Automatically finds the best audio source for each platform.
  */
 export function detectAudioDevice() {
   const detectors = {
@@ -14,7 +14,7 @@ export function detectAudioDevice() {
 
   const detector = detectors[process.platform];
   if (!detector) {
-    console.error(chalk.red(`\n✖ Desteklenmeyen platform: ${process.platform}`));
+    console.error(chalk.red(`\n✖ Unsupported platform: ${process.platform}`));
     return null;
   }
 
@@ -25,7 +25,7 @@ export function detectAudioDevice() {
 // Windows: DirectShow
 // ────────────────────────────────────────
 
-const WINDOWS_LOOPBACK_KEYWORDS = ['stereo mix', 'what u hear', 'loopback', 'wave out', 'karışık ses'];
+const WINDOWS_LOOPBACK_KEYWORDS = ['stereo mix', 'what u hear', 'loopback', 'wave out'];
 
 function detectWindowsDevice() {
   const output = runFfmpegListDevices('ffmpeg -list_devices true -f dshow -i dummy 2>&1');
@@ -38,13 +38,13 @@ function detectWindowsDevice() {
   }
 
   if (devices.length > 0) {
-    console.log(chalk.yellow(`⚠ Loopback cihazı bulunamadı. Mikrofon kullanılıyor: "${devices[0]}"`));
-    console.log(chalk.dim('  Sistem sesini de yakalamak için Ses ayarlarından "Stereo Mix"i etkinleştirin.\n'));
+    console.log(chalk.yellow(`⚠ Loopback device not found. Using microphone: "${devices[0]}"`));
+    console.log(chalk.dim('  To capture system audio, enable "Stereo Mix" in Sound settings.\n'));
     return { args: ['-f', 'dshow', '-i', `audio=${devices[0]}`], deviceName: devices[0] };
   }
 
-  console.log(chalk.yellow('⚠ Ses cihazı listelenemedi, varsayılan giriş deneniyor...'));
-  return { args: ['-f', 'dshow', '-i', 'audio=virtual-audio-capturer'], deviceName: 'Varsayılan ses girişi' };
+  console.log(chalk.yellow('⚠ Could not list audio devices, trying default input...'));
+  return { args: ['-f', 'dshow', '-i', 'audio=virtual-audio-capturer'], deviceName: 'Default audio input' };
 }
 
 // ────────────────────────────────────────
@@ -64,12 +64,12 @@ function detectMacDevice() {
   }
 
   if (devices.length > 0) {
-    console.log(chalk.yellow(`⚠ Loopback cihazı bulunamadı. Varsayılan mikrofon: "${devices[0].name}"`));
-    console.log(chalk.dim('  Sistem sesini de yakalamak için BlackHole kurun: brew install blackhole-2ch\n'));
+    console.log(chalk.yellow(`⚠ Loopback device not found. Using default mic: "${devices[0].name}"`));
+    console.log(chalk.dim('  To capture system audio, install BlackHole: brew install blackhole-2ch\n'));
     return { args: ['-f', 'avfoundation', '-i', `:${devices[0].index}`], deviceName: devices[0].name };
   }
 
-  return { args: ['-f', 'avfoundation', '-i', ':0'], deviceName: 'Varsayılan ses girişi' };
+  return { args: ['-f', 'avfoundation', '-i', ':0'], deviceName: 'Default audio input' };
 }
 
 function parseMacDeviceList(output) {
@@ -112,21 +112,21 @@ function detectLinuxDevice() {
     if (monitorSource) {
       console.log(chalk.green(`✓ PulseAudio monitor: ${monitorSource}`));
     } else {
-      console.log(chalk.yellow(`⚠ Monitor bulunamadı, varsayılan kaynak: ${source}`));
+      console.log(chalk.yellow(`⚠ Monitor not found, using default source: ${source}`));
     }
 
     return { args: ['-f', 'pulse', '-i', source], deviceName: source };
   } catch {
-    return { args: ['-f', 'alsa', '-i', 'default'], deviceName: 'ALSA varsayılan' };
+    return { args: ['-f', 'alsa', '-i', 'default'], deviceName: 'ALSA default' };
   }
 }
 
 // ────────────────────────────────────────
-// Ortak yardımcılar
+// Shared helpers
 // ────────────────────────────────────────
 
 /**
- * ffmpeg -list_devices komutunu çalıştır (her zaman hata kodu döner)
+ * Run ffmpeg -list_devices (always returns error code)
  */
 function runFfmpegListDevices(command) {
   try {
@@ -137,7 +137,7 @@ function runFfmpegListDevices(command) {
 }
 
 /**
- * ffmpeg cihaz listesi çıktısını parse et
+ * Parse ffmpeg device list output
  */
 function parseDeviceList(output, startMarker, endMarker, pattern) {
   const devices = [];
@@ -155,7 +155,7 @@ function parseDeviceList(output, startMarker, endMarker, pattern) {
 }
 
 /**
- * Cihaz listesinden keyword'e göre eşleşen ilk cihazı bul
+ * Find first device matching any keyword
  */
 function findByKeywords(devices, keywords) {
   for (const device of devices) {

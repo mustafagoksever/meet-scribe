@@ -26,11 +26,11 @@ const DEFAULTS = {
 };
 
 /**
- * Config çözümleme önceliği:
+ * Config resolution priority:
  * 1. CLI flag
- * 2. Ortam değişkeni
- * 3. Config dosyası (.meetscriberc)
- * 4. Default değer
+ * 2. Environment variable
+ * 3. Config file (.meetscriberc)
+ * 4. Default value
  */
 export function resolveConfig(opts) {
   const fileConfig = loadConfigFile();
@@ -56,8 +56,8 @@ export function resolveConfig(opts) {
   };
 
   if (!config.apiKey) {
-    console.error(chalk.red('\n✖ API key bulunamadı!\n'));
-    console.error(chalk.yellow('Şu yollardan birini kullan:'));
+    console.error(chalk.red('\n✖ API key not found!\n'));
+    console.error(chalk.yellow('Use one of the following methods:'));
     console.error(chalk.dim('  1. CLI flag:     ') + chalk.white('--api-key sk-...'));
     console.error(chalk.dim('  2. Env var:      ') + chalk.white('set OPENAI_API_KEY=sk-...'));
     console.error(chalk.dim('  3. Config file:  ') + chalk.white('meet-scribe init'));
@@ -69,7 +69,7 @@ export function resolveConfig(opts) {
 }
 
 /**
- * Config dosyasını oku: önce proje dizini, sonra home dizini
+ * Load config file: check project directory first, then home directory
  */
 function loadConfigFile() {
   const paths = [
@@ -81,10 +81,9 @@ function loadConfigFile() {
     if (fs.existsSync(configPath)) {
       try {
         const content = fs.readFileSync(configPath, 'utf-8');
-        const parsed = JSON.parse(content);
-        return parsed;
+        return JSON.parse(content);
       } catch (err) {
-        console.error(chalk.yellow(`⚠ Config dosyası okunamadı: ${configPath} — ${err.message}`));
+        console.error(chalk.yellow(`⚠ Could not read config file: ${configPath} — ${err.message}`));
       }
     }
   }
@@ -93,7 +92,7 @@ function loadConfigFile() {
 }
 
 /**
- * Varsayılan config dosyası oluştur
+ * Create default config file
  */
 export function createConfigFile(targetDir) {
   const configPath = path.join(targetDir || process.cwd(), CONFIG_FILENAME);
@@ -115,7 +114,7 @@ export function createConfigFile(targetDir) {
     zulipEmail: '',
     zulipApiKey: '',
     zulipStream: '',
-    zulipTopic: 'Toplantı Notları',
+    zulipTopic: 'Meeting Notes',
   };
 
   fs.writeFileSync(configPath, JSON.stringify(template, null, 2), 'utf-8');

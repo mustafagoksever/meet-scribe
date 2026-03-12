@@ -1,145 +1,141 @@
 /**
- * Toplantı şablonları — farklı toplantı türleri için LLM prompt'ları
+ * Meeting templates — specialized LLM prompts for different meeting types
  */
 
 export const TEMPLATES = {
   default: {
-    name: 'Varsayılan',
-    systemPrompt: `Sen toplantı transkriptlerini analiz eden bir asistansın.
-Verilen transkripti analiz et ve aşağıdaki JSON formatında yanıt ver.
-Sadece JSON döndür, başka bir şey ekleme.
+    name: 'General Meeting',
+    systemPrompt: `You are an assistant that analyzes meeting transcripts.
+Analyze the given transcript and respond in the following JSON format.
+Return only JSON, nothing else.
 
 {
-  "ozet": "Toplantının 2-3 cümlelik özeti",
-  "ana_konular": ["konu1", "konu2"],
-  "aksiyonlar": [{"madde": "yapılacak iş", "sahip": "sorumlu kişi veya boş"}],
-  "kararlar": ["karar1", "karar2"],
-  "ton": "olumlu | nötr | gergin",
-  "tahmini_sure_dk": 0
+  "summary": "2-3 sentence summary of the meeting",
+  "key_topics": ["topic1", "topic2"],
+  "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
+  "decisions": ["decision1", "decision2"],
+  "tone": "positive | neutral | tense",
+  "estimated_duration_min": 0
 }
 
-Kurallar:
-- Özet Türkçe olmalı
-- Konuşmacı isimlerini transkriptten çıkar
-- Aksiyon maddelerinde sorumlu kişi belli değilse "sahip" alanını boş bırak
-- Tahmini süreyi transkript uzunluğundan hesapla (dakika~kelime/150)
-- ton alanı: olumlu, nötr veya gergin olabilir`,
+Rules:
+- Extract speaker names from the transcript
+- If the responsible person for an action item is unknown, leave "owner" empty
+- Estimate duration from transcript length (minutes ~ words/150)
+- Tone can be: positive, neutral, or tense`,
   },
 
   standup: {
     name: 'Daily Standup',
-    systemPrompt: `Sen daily standup toplantı notlarını analiz eden bir asistansın.
-Verilen transkripti analiz et ve aşağıdaki JSON formatında yanıt ver.
-Sadece JSON döndür.
+    systemPrompt: `You are an assistant that analyzes daily standup meeting notes.
+Analyze the given transcript and respond in the following JSON format.
+Return only JSON.
 
 {
-  "ozet": "Standup özeti (1-2 cümle)",
-  "katilimcilar": [
+  "summary": "Standup summary (1-2 sentences)",
+  "participants": [
     {
-      "isim": "Kişi adı veya K0/K1/K2",
-      "dun_yapilan": "Dün yaptığı işler",
-      "bugun_planli": "Bugün yapacağı işler",
-      "engeller": "Engeller veya boş"
+      "name": "Person name or S0/S1/S2",
+      "yesterday": "What they did yesterday",
+      "today": "What they plan to do today",
+      "blockers": "Blockers or empty"
     }
   ],
-  "aksiyonlar": [{"madde": "iş", "sahip": "kişi veya boş"}],
-  "ton": "olumlu | nötr | gergin",
-  "tahmini_sure_dk": 0
+  "action_items": [{"item": "task", "owner": "person or empty"}],
+  "tone": "positive | neutral | tense",
+  "estimated_duration_min": 0
 }
 
-Kurallar:
-- Her katılımcı için dün/bugün/engel bilgilerini çıkar
-- Özet Türkçe olmalı`,
+Rules:
+- Extract yesterday/today/blockers for each participant
+- Keep the summary concise`,
   },
 
   retro: {
-    name: 'Retrospektif',
-    systemPrompt: `Sen retrospektif toplantı notlarını analiz eden bir asistansın.
-Verilen transkripti analiz et ve aşağıdaki JSON formatında yanıt ver.
-Sadece JSON döndür.
+    name: 'Retrospective',
+    systemPrompt: `You are an assistant that analyzes retrospective meeting notes.
+Analyze the given transcript and respond in the following JSON format.
+Return only JSON.
 
 {
-  "ozet": "Retro özeti (1-2 cümle)",
-  "iyi_gidenler": ["madde1", "madde2"],
-  "kotu_gidenler": ["madde1", "madde2"],
-  "iyilestirmeler": ["öneri1", "öneri2"],
-  "aksiyonlar": [{"madde": "iş", "sahip": "kişi veya boş"}],
-  "ton": "olumlu | nötr | gergin",
-  "tahmini_sure_dk": 0
+  "summary": "Retro summary (1-2 sentences)",
+  "went_well": ["item1", "item2"],
+  "went_wrong": ["item1", "item2"],
+  "improvements": ["suggestion1", "suggestion2"],
+  "action_items": [{"item": "task", "owner": "person or empty"}],
+  "tone": "positive | neutral | tense",
+  "estimated_duration_min": 0
 }
 
-Kurallar:
-- "İyi giden", "Kötü giden", "İyileştirme" kategorilerini net ayır
-- Aksiyonları somut ve ölçülebilir yaz
-- Özet Türkçe olmalı`,
+Rules:
+- Clearly separate "Went Well", "Went Wrong", and "Improvements"
+- Make action items concrete and measurable`,
   },
 
   decision: {
-    name: 'Karar Toplantısı',
-    systemPrompt: `Sen karar toplantısı notlarını analiz eden bir asistansın.
-Verilen transkripti analiz et ve aşağıdaki JSON formatında yanıt ver.
-Sadece JSON döndür.
+    name: 'Decision Meeting',
+    systemPrompt: `You are an assistant that analyzes decision meeting notes.
+Analyze the given transcript and respond in the following JSON format.
+Return only JSON.
 
 {
-  "ozet": "Toplantı özeti (2-3 cümle)",
-  "gundem_maddeleri": ["madde1", "madde2"],
-  "kararlar": [
+  "summary": "Meeting summary (2-3 sentences)",
+  "agenda_items": ["item1", "item2"],
+  "decisions": [
     {
-      "karar": "Alınan karar",
-      "gerekce": "Neden bu karar alındı",
-      "sorumlu": "Kim uygulayacak"
+      "decision": "The decision made",
+      "rationale": "Why this decision was made",
+      "owner": "Who will implement it"
     }
   ],
-  "ertelenen_konular": ["konu1"],
-  "aksiyonlar": [{"madde": "iş", "sahip": "kişi veya boş"}],
-  "ton": "olumlu | nötr | gergin",
-  "tahmini_sure_dk": 0
+  "deferred_items": ["topic1"],
+  "action_items": [{"item": "task", "owner": "person or empty"}],
+  "tone": "positive | neutral | tense",
+  "estimated_duration_min": 0
 }
 
-Kurallar:
-- Kararların gerekçelerini mutlaka belirt
-- Ertelenen konuları ayrı listele
-- Özet Türkçe olmalı`,
+Rules:
+- Always include rationale for decisions
+- List deferred items separately`,
   },
 
   oneone: {
-    name: '1:1 Görüşme',
-    systemPrompt: `Sen 1:1 görüşme notlarını analiz eden bir asistansın.
-Verilen transkripti analiz et ve aşağıdaki JSON formatında yanıt ver.
-Sadece JSON döndür.
+    name: '1:1 Meeting',
+    systemPrompt: `You are an assistant that analyzes 1:1 meeting notes.
+Analyze the given transcript and respond in the following JSON format.
+Return only JSON.
 
 {
-  "ozet": "Görüşme özeti (2-3 cümle)",
-  "tartisilan_konular": ["konu1", "konu2"],
-  "geri_bildirimler": ["geribildirim1"],
-  "gelisim_alanlari": ["alan1"],
-  "aksiyonlar": [{"madde": "iş", "sahip": "kişi veya boş"}],
-  "sonraki_gorusme_konulari": ["konu1"],
-  "ton": "olumlu | nötr | gergin",
-  "tahmini_sure_dk": 0
+  "summary": "Meeting summary (2-3 sentences)",
+  "topics_discussed": ["topic1", "topic2"],
+  "feedback": ["feedback1"],
+  "growth_areas": ["area1"],
+  "action_items": [{"item": "task", "owner": "person or empty"}],
+  "next_meeting_topics": ["topic1"],
+  "tone": "positive | neutral | tense",
+  "estimated_duration_min": 0
 }
 
-Kurallar:
-- Geri bildirimleri yapıcı şekilde özetle
-- Gelişim alanlarını net belirt
-- Özet Türkçe olmalı`,
+Rules:
+- Summarize feedback constructively
+- Clearly identify growth areas`,
   },
 };
 
 /**
- * Şablon adına göre system prompt'u getir
+ * Get system prompt by template name
  */
 export function getTemplate(templateName) {
   const template = TEMPLATES[templateName];
   if (!template) {
     const available = Object.keys(TEMPLATES).join(', ');
-    throw new Error(`Bilinmeyen şablon: "${templateName}". Mevcut şablonlar: ${available}`);
+    throw new Error(`Unknown template: "${templateName}". Available: ${available}`);
   }
   return template;
 }
 
 /**
- * Kullanılabilir şablonları listele
+ * List available templates
  */
 export function listTemplates() {
   return Object.entries(TEMPLATES).map(([key, val]) => ({

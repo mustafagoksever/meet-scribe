@@ -1,7 +1,7 @@
 {
   "name": "meet-scribe",
   "version": "2.0.0",
-  "description": "Toplantı sesini kayıt eden, Whisper API ile transkript eden, LLM ile özetleyen ve Markdown üreten CLI aracı",
+  "description": "CLI tool that records meetings, transcribes with Whisper API, summarizes with LLM, and generates Markdown",
   "type": "module",
   "bin": {
     "meet-scribe": "./bin/meet-scribe.js"
