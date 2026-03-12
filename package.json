@@ -1,0 +1,21 @@
+{
+  "name": "meet-scribe",
+  "version": "2.0.0",
+  "description": "Toplantı sesini kayıt eden, Whisper API ile transkript eden, LLM ile özetleyen ve Markdown üreten CLI aracı",
+  "type": "module",
+  "bin": {
+    "meet-scribe": "./bin/meet-scribe.js"
+  },
+  "scripts": {
+    "start": "node bin/meet-scribe.js"
+  },
+  "keywords": ["meeting", "transcription", "whisper", "openai", "cli"],
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "form-data": "^4.0.0",
+    "node-fetch": "^3.3.2",
+    "ora": "^8.0.1"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+meet-scribe-output/
+.meetscriberc
+.tmp/
+.tmp_split/
+*.wav
+*.mp3
+*.log
+.DS_Store
+Thumbs.db
