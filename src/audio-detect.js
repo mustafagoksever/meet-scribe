@@ -29,7 +29,20 @@ const WINDOWS_LOOPBACK_KEYWORDS = ['stereo mix', 'what u hear', 'loopback', 'wav
 
 function detectWindowsDevice() {
   const output = runFfmpegListDevices('ffmpeg -list_devices true -f dshow -i dummy 2>&1');
-  const devices = parseDeviceList(output, 'DirectShow audio devices', 'DirectShow video devices', /"([^"]+)"/);
+  
+  const devices = [];
+  // Newer ffmpeg output format natively specifies "(audio)"
+  for (const line of output.split('\n')) {
+    if (line.includes('[dshow') && line.includes('(audio)')) {
+      const match = line.match(/"([^"]+)"/);
+      if (match && !devices.includes(match[1])) devices.push(match[1]);
+    }
+  }
+
+  // Fallback to older format parsing if empty
+  if (devices.length === 0) {
+    devices.push(...parseDeviceList(output, 'DirectShow audio devices', 'DirectShow video devices', /"([^"]+)"/));
+  }
 
   const loopback = findByKeywords(devices, WINDOWS_LOOPBACK_KEYWORDS);
 
