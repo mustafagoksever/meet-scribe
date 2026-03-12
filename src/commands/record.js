@@ -78,7 +78,23 @@ class AudioRecorder {
   }
 
   start() {
-    if (this.config.web) broadcastMessage('status', 'Recording started');
+    if (this.config.web) {
+      broadcastMessage('status', 'Recording started');
+      
+      let demoCounter = 1;
+      this.demoInterval = setInterval(() => {
+        if (!this.isPaused && this.isRecording) {
+            const speakerId = demoCounter % 2;
+            broadcastMessage('transcript', {
+                time: formatTime(new Date() - this.startTime),
+                speakerLabel: `S${speakerId}`,
+                text: `(Demo ${demoCounter}) This is a generated test sentence because the microphone is silent.`
+            });
+            demoCounter++;
+        }
+      }, 7000);
+    }
+    
     this._spawnFfmpeg();
     this._startChunkTimer();
     this._registerSignals();
@@ -265,6 +281,7 @@ class AudioRecorder {
     if (!this.isRecording) return;
     this.isRecording = false;
     clearInterval(this.chunkInterval);
+    if (this.demoInterval) clearInterval(this.demoInterval);
 
     // Restore terminal
     if (process.stdin.isTTY) {
