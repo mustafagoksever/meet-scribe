@@ -57,7 +57,7 @@ export function run() {
   // transcribe
   program
     .command('transcribe <file>')
-    .description('Transcribe an existing audio file')
+    .description('Transcribe an existing audio/video file (mp4, mp3, wav, etc.)')
     .action(async (file) => {
       await handleTranscribe(file, program.opts());
     });
