@@ -6,7 +6,7 @@ import { getTemplate } from './templates.js';
  * Uses template system to apply different prompts for different meeting types.
  */
 export async function summarizeTranscript(transcript, config) {
-  const template = getTemplate(config.template || 'default');
+  const template = getTemplate(config.template || 'default', config.lang || 'tr');
   const url = `${config.baseUrl}/chat/completions`;
 
   const body = {

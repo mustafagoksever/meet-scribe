@@ -37,6 +37,22 @@
       --shadow-glow: 0 0 30px rgba(59,130,246,0.15);
     }
 
+    body.light-mode {
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-card: #f1f5f9;
+      --bg-card-hover: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-light: #cbd5e1;
+      --accent-glow: rgba(59, 130, 246, 0.1);
+      --gradient-card: linear-gradient(145deg, rgba(59,130,246,0.03), rgba(139,92,246,0.03));
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -732,15 +748,22 @@
         MeetScribe
       </a>
       <div class="nav-links">
-        <button class="nav-link active" data-page="home" onclick="navigate('home')">🏠 Ana Sayfa</button>
-        <button class="nav-link" data-page="meetings" onclick="navigate('meetings')">📋 Toplantılar</button>
-        <button class="nav-link" data-page="search" onclick="navigate('search')">🔍 Arama</button>
+        <button class="nav-link active" data-page="home" onclick="navigate('home')" data-i18n="nav_home">🏠 Ana Sayfa</button>
+        <button class="nav-link" data-page="meetings" onclick="navigate('meetings')" data-i18n="nav_meetings">📋 Toplantılar</button>
+        <button class="nav-link" data-page="search" onclick="navigate('search')" data-i18n="nav_search">🔍 Arama</button>
       </div>
     </div>
     <div class="navbar-right">
+      <div class="theme-toggle" onclick="toggleTheme()" title="Temayı Değiştir" style="cursor: pointer; font-size: 1.2rem; padding: 0.5rem; border-radius: 8px; transition: background 0.2s;">
+        <span id="theme-icon">🌙</span>
+      </div>
+      <div class="lang-toggle" style="display: flex; gap: 0.3rem; background: rgba(255,255,255,0.05); padding: 0.2rem; border-radius: 8px; border: 1px solid var(--border);">
+        <button class="lang-btn" id="lang-tr" onclick="setLanguage('tr')" style="padding: 0.3rem 0.6rem; border-radius: 6px; border: none; background: var(--accent); color: white; cursor: pointer; font-size: 0.75rem; font-weight: 600;">TR</button>
+        <button class="lang-btn" id="lang-en" onclick="setLanguage('en')" style="padding: 0.3rem 0.6rem; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; font-weight: 600;">EN</button>
+      </div>
       <div class="conn-badge">
         <div class="conn-dot" id="conn-dot"></div>
-        <span id="conn-status">Bağlanıyor...</span>
+        <span id="conn-status" data-i18n="connecting">Bağlanıyor...</span>
       </div>
     </div>
   </nav>
@@ -749,8 +772,8 @@
   <div class="page active" id="page-home">
     <div class="hero">
       <h1>🎙 MeetScribe</h1>
-      <p>Toplantılarınızı kaydedin, yazıya dökün ve akıllı özetler oluşturun.</p>
-      <button class="btn btn-primary btn-start btn-lg" onclick="openTemplateModal()">
+      <p data-i18n="hero_subtitle">Toplantılarınızı kaydedin, yazıya dökün ve akıllı özetler oluşturun.</p>
+      <button class="btn btn-primary btn-start btn-lg" onclick="openTemplateModal()" data-i18n="start_new_recording">
         ▶ Yeni Kayıt Başlat
       </button>
     </div>
@@ -762,16 +785,16 @@
     <div class="home-search">
       <div class="search-bar">
         <span class="search-icon">🔍</span>
-        <input type="text" id="home-search-input" placeholder="Toplantılarda ara..." onkeydown="if(event.key==='Enter'){navigate('search');document.getElementById('search-input').value=this.value;doSearch()}">
+        <input type="text" id="home-search-input" data-i18n-attr="placeholder:search_placeholder" placeholder="Toplantılarda ara..." onkeydown="if(event.key==='Enter'){navigate('search');document.getElementById('search-input').value=this.value;doSearch()}">
       </div>
     </div>
 
-    <div class="section-title">📅 Son Toplantılar</div>
+    <div class="section-title" data-i18n="recent_meetings">📅 Son Toplantılar</div>
     <div class="recent-meetings" id="recent-meetings">
       <div class="empty-state">
         <div class="icon">📭</div>
-        <h3>Henüz toplantı kaydedilmemiş</h3>
-        <p>Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.</p>
+        <h3 data-i18n="no_meetings_recorded">Henüz toplantı kaydedilmemiş</h3>
+        <p data-i18n="start_recording_to_create">Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.</p>
       </div>
     </div>
   </div>
@@ -807,7 +830,7 @@
   <!-- ── MEETING DETAIL PAGE ─────────── -->
   <div class="page" id="page-detail">
     <div class="detail-header">
-      <button class="detail-back" onclick="navigate('meetings')">← Geri</button>
+      <button class="detail-back" id="detail-back-btn" onclick="navigate('meetings')">← Geri</button>
       <h2 id="detail-title">Toplantı Detayı</h2>
     </div>
     <div class="detail-content" id="detail-content">
@@ -877,12 +900,170 @@
 
 <script>
   // ── State ──────────────────────────────
+  let currentLang = localStorage.getItem('ms-lang') || 'tr';
+  let currentTheme = localStorage.getItem('ms-theme') || 'dark';
   let wsConnection = null;
   let currentPage = 'home';
   let selectedTemplate = 'default';
   let isPausedLocally = false;
   const knownSpeakers = new Set();
   const SPEAKER_COLORS = ['#22d3ee','#4ade80','#d946ef','#facc15','#60a5fa','#f87171','#e879f9','#34d399','#38bdf8','#fb923c'];
+
+  const TRANSLATIONS = {
+    tr: {
+      nav_home: "🏠 Ana Sayfa",
+      nav_meetings: "📋 Toplantılar",
+      nav_search: "🔍 Arama",
+      hero_subtitle: "Toplantılarınızı kaydedin, yazıya dökün ve akıllı özetler oluşturun.",
+      start_new_recording: "▶ Yeni Kayıt Başlat",
+      recent_meetings: "📅 Son Toplantılar",
+      no_meetings_recorded: "Henüz toplantı kaydedilmemiş",
+      start_recording_to_create: "Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.",
+      search_placeholder: "Toplantılarda ara...",
+      all_meetings: "📋 Tüm Toplantılar",
+      new_recording: "▶ Yeni Kayıt",
+      search_title: "🔍 Arama",
+      search_content_placeholder: "Toplantı içeriklerinde ara...",
+      no_search_results: "için sonuç bulunamadı",
+      search_error: "Arama hatası",
+      searching: "Aranıyor...",
+      matches_found: "eşleşme bulundu",
+      detail_back: "← Geri",
+      detail_title_label: "Toplantı Detayı",
+      speakers_label: "Konuşmacılar",
+      wait_for_audio: "Ses bekleniyor...",
+      btn_pause: "⏸ Duraklat",
+      btn_resume: "▶ Devam Et",
+      btn_stop: "⏹ Durdur",
+      rec_waiting: "Bekleme...",
+      rec_active: "Kayıt aktif",
+      rec_paused: "Duraklatıldı",
+      rec_starting: "Başlatılıyor...",
+      ready_to_record: "Kayda hazır",
+      listening_audio: "Toplantı sesini dinliyor...",
+      select_template_title: "📋 Toplantı Şablonu Seçin",
+      cancel: "İptal",
+      start_recording: "▶ Kayda Başla",
+      summary_modal_title: "📊 Toplantı Özeti",
+      analysis_generating: "Analiz oluşturuluyor...",
+      connected: "Bağlandı",
+      disconnected: "Bağlantı kesildi",
+      recording_status: "Kayıt yapılıyor...",
+      total_meetings_stat: "Toplam Toplantı",
+      positive_meetings_stat: "Pozitif Toplantı",
+      total_data_stat: "Toplam Veri",
+      stop_confirm: "Kaydı durdurup özet oluşturmak istediğinize emin misiniz?",
+      summary_header: "📌 Özet",
+      tone_header: "🎭 Ton",
+      action_items_header: "✅ Aksiyon Kalemleri",
+      topics_header: "🗂 Konular",
+      decisions_header: "⚖️ Kararlar",
+      agenda_header: "📋 Gündem",
+      feedback_header: "💬 Geri Bildirim",
+      growth_header: "📈 Gelişim Alanları",
+      meeting_not_found: "Toplantı bulunamadı"
+    },
+    en: {
+      nav_home: "🏠 Home",
+      nav_meetings: "📋 Meetings",
+      nav_search: "🔍 Search",
+      hero_subtitle: "Record your meetings, transcribe them, and generate smart summaries.",
+      start_new_recording: "▶ Start New Recording",
+      recent_meetings: "📅 Recent Meetings",
+      no_meetings_recorded: "No meetings recorded yet",
+      start_recording_to_create: "Start a new recording to create your first meeting.",
+      search_placeholder: "Search in meetings...",
+      all_meetings: "📋 All Meetings",
+      new_recording: "▶ New Recording",
+      search_title: "🔍 Search",
+      search_content_placeholder: "Search in meeting content...",
+      no_search_results: "no results found for",
+      search_error: "Search error",
+      searching: "Searching...",
+      matches_found: "matches found",
+      detail_back: "← Back",
+      detail_title_label: "Meeting Detail",
+      speakers_label: "Speakers",
+      wait_for_audio: "Waiting for audio...",
+      btn_pause: "⏸ Pause",
+      btn_resume: "▶ Resume",
+      btn_stop: "⏹ Stop",
+      rec_waiting: "Waiting...",
+      rec_active: "Recording active",
+      rec_paused: "Paused",
+      rec_starting: "Starting...",
+      ready_to_record: "Ready to record",
+      listening_audio: "Listening to meeting audio...",
+      select_template_title: "📋 Select Meeting Template",
+      cancel: "Cancel",
+      start_recording: "▶ Start Recording",
+      summary_modal_title: "📊 Meeting Summary",
+      analysis_generating: "Generating analysis...",
+      connected: "Connected",
+      disconnected: "Disconnected",
+      recording_status: "Recording...",
+      total_meetings_stat: "Total Meetings",
+      positive_meetings_stat: "Positive Meetings",
+      total_data_stat: "Total Data",
+      stop_confirm: "Are you sure you want to stop recording and generate a summary?",
+      summary_header: "📌 Summary",
+      tone_header: "🎭 Tone",
+      action_items_header: "✅ Action Items",
+      topics_header: "🗂 Topics",
+      decisions_header: "⚖️ Decisions",
+      agenda_header: "📋 Agenda",
+      feedback_header: "💬 Feedback",
+      growth_header: "📈 Growth Areas",
+      meeting_not_found: "Meeting not found"
+    }
+  };
+
+  function t(key) {
+    return TRANSLATIONS[currentLang][key] || key;
+  }
+
+  function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-attr]').forEach(el => {
+      const attrPair = el.getAttribute('data-i18n-attr').split(':');
+      if (attrPair.length === 2) {
+        el.setAttribute(attrPair[0], t(attrPair[1]));
+      }
+    });
+
+    // Update active lang button
+    document.getElementById('lang-tr').style.background = currentLang === 'tr' ? 'var(--accent)' : 'transparent';
+    document.getElementById('lang-tr').style.color = currentLang === 'tr' ? 'white' : 'var(--text-muted)';
+    document.getElementById('lang-en').style.background = currentLang === 'en' ? 'var(--accent)' : 'transparent';
+    document.getElementById('lang-en').style.color = currentLang === 'en' ? 'white' : 'var(--text-muted)';
+  }
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('ms-lang', lang);
+    applyTranslations();
+    if (currentPage === 'home') loadHome();
+    if (currentPage === 'meetings') loadMeetings();
+  }
+
+  function applyTheme() {
+    if (currentTheme === 'light') {
+      document.body.classList.add('light-mode');
+      document.getElementById('theme-icon').textContent = '☀️';
+    } else {
+      document.body.classList.remove('light-mode');
+      document.getElementById('theme-icon').textContent = '🌙';
+    }
+  }
+
+  function toggleTheme() {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('ms-theme', currentTheme);
+    applyTheme();
+  }
 
   // ── Router ─────────────────────────────
   function navigate(page, data) {
@@ -914,7 +1095,7 @@
 
     wsConnection.onopen = () => {
       document.getElementById('conn-dot').className = 'conn-dot connected';
-      document.getElementById('conn-status').textContent = 'Bağlandı';
+      document.getElementById('conn-status').textContent = t('connected');
     };
 
     wsConnection.onmessage = (event) => {
@@ -928,7 +1109,7 @@
 
     wsConnection.onclose = () => {
       document.getElementById('conn-dot').className = 'conn-dot';
-      document.getElementById('conn-status').textContent = 'Bağlantı kesildi';
+      document.getElementById('conn-status').textContent = t('disconnected');
       setTimeout(connect, 2000);
     };
   }
@@ -938,9 +1119,9 @@
       case 'status':
         if (data.payload === 'Recording started') {
           document.getElementById('conn-dot').className = 'conn-dot recording';
-          document.getElementById('conn-status').textContent = 'Kayıt yapılıyor...';
+          document.getElementById('conn-status').textContent = t('recording_status');
           document.getElementById('rec-dot').className = 'conn-dot recording';
-          document.getElementById('rec-status').textContent = 'Kayıt aktif';
+          document.getElementById('rec-status').textContent = t('rec_active');
           document.getElementById('btn-pause').disabled = false;
           document.getElementById('btn-stop').disabled = false;
           isPausedLocally = false;
@@ -950,19 +1131,19 @@
         break;
       case 'pause':
         document.getElementById('conn-dot').className = 'conn-dot paused';
-        document.getElementById('conn-status').textContent = 'Duraklatıldı';
+        document.getElementById('conn-status').textContent = t('rec_paused');
         document.getElementById('rec-dot').className = 'conn-dot paused';
-        document.getElementById('rec-status').textContent = 'Duraklatıldı';
+        document.getElementById('rec-status').textContent = t('rec_paused');
         isPausedLocally = true;
-        document.getElementById('btn-pause').innerHTML = '▶ Devam Et';
+        document.getElementById('btn-pause').innerHTML = t('btn_resume');
         break;
       case 'resume':
         document.getElementById('conn-dot').className = 'conn-dot recording';
-        document.getElementById('conn-status').textContent = 'Kayıt yapılıyor...';
+        document.getElementById('conn-status').textContent = t('recording_status');
         document.getElementById('rec-dot').className = 'conn-dot recording';
-        document.getElementById('rec-status').textContent = 'Kayıt aktif';
+        document.getElementById('rec-status').textContent = t('rec_active');
         isPausedLocally = false;
-        document.getElementById('btn-pause').innerHTML = '⏸ Duraklat';
+        document.getElementById('btn-pause').innerHTML = t('btn_pause');
         break;
       case 'transcript':
         addTranscript(data.payload);
@@ -972,16 +1153,16 @@
         break;
       case 'end':
         document.getElementById('conn-dot').className = 'conn-dot connected';
-        document.getElementById('conn-status').textContent = 'Kayıt tamamlandı';
+        document.getElementById('conn-status').textContent = t('connected');
         document.getElementById('rec-dot').className = 'conn-dot connected';
-        document.getElementById('rec-status').textContent = 'Tamamlandı';
+        document.getElementById('rec-status').textContent = t('connected');
         document.getElementById('btn-pause').disabled = true;
         document.getElementById('btn-stop').disabled = true;
         break;
       case 'error':
         showToast('HATA', data.payload, 'error');
         document.getElementById('conn-dot').className = 'conn-dot';
-        document.getElementById('conn-status').textContent = 'Bağlantı kesildi';
+        document.getElementById('conn-status').textContent = t('disconnected');
         document.getElementById('rec-dot').className = 'conn-dot';
         document.getElementById('rec-status').textContent = 'Hata';
         document.getElementById('btn-pause').disabled = true;
@@ -1001,12 +1182,12 @@
 
   function stopRecording() {
     if (!wsConnection || wsConnection.readyState !== 1) return;
-    if (confirm('Kaydı durdurup özet oluşturmak istediğinize emin misiniz?')) {
+    if (confirm(t('stop_confirm'))) {
       wsConnection.send(JSON.stringify({ type: 'action', payload: 'stop' }));
       document.getElementById('btn-pause').disabled = true;
       document.getElementById('btn-stop').disabled = true;
       document.getElementById('rec-dot').className = 'conn-dot';
-      document.getElementById('rec-status').textContent = 'İşleniyor...';
+      document.getElementById('rec-status').textContent = t('searching');
     }
   }
 
@@ -1052,9 +1233,12 @@
   async function openTemplateModal() {
     const modal = document.getElementById('template-modal');
     const grid = document.getElementById('templates-grid');
+    
+    // Update modal title
+    modal.querySelector('h2').textContent = t('select_template_title');
 
     try {
-      const resp = await fetch('/api/templates');
+      const resp = await fetch('/api/templates?lang=' + currentLang);
       const templates = await resp.json();
 
       grid.innerHTML = templates.map(t => `
@@ -1093,21 +1277,26 @@
 
     // Reset recording state
     knownSpeakers.clear();
-    document.getElementById('participants-list').innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">Ses bekleniyor...</div>';
+    document.getElementById('participants-list').innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">${t('wait_for_audio')}</div>`;
     document.getElementById('speaker-count').textContent = '0';
-    document.getElementById('transcript-box').innerHTML = '<div class="empty-feed" id="empty-feed"><div class="icon">🎙</div><h3>Kayda hazır</h3><p>Toplantı sesini dinliyor...</p></div>';
+    document.getElementById('transcript-box').innerHTML = `<div class="empty-feed" id="empty-feed"><div class="icon">🎙</div><h3>${t('ready_to_record')}</h3><p>${t('listening_audio')}</p></div>`;
     document.getElementById('btn-pause').disabled = true;
     document.getElementById('btn-stop').disabled = true;
-    document.getElementById('btn-pause').innerHTML = '⏸ Duraklat';
+    document.getElementById('btn-pause').innerHTML = t('btn_pause');
 
     // Navigate to recording page
     navigate('recording');
 
-    // Send start command with template
+    // Send start command with template and lang
     if (wsConnection && wsConnection.readyState === 1) {
-      wsConnection.send(JSON.stringify({ type: 'action', payload: 'start', template: selectedTemplate }));
+      wsConnection.send(JSON.stringify({ 
+        type: 'action', 
+        payload: 'start', 
+        template: selectedTemplate,
+        lang: currentLang 
+      }));
       document.getElementById('rec-dot').className = 'conn-dot';
-      document.getElementById('rec-status').textContent = 'Başlatılıyor...';
+      document.getElementById('rec-status').textContent = t('rec_starting');
     }
   }
 
@@ -1115,15 +1304,15 @@
   function showSummary(analysis) {
     if (!analysis) return;
 
-    let html = `<h3>📌 Özet</h3><p>${analysis.summary || 'N/A'}</p>`;
+    let html = `<h3>${t('summary_header')}</h3><p>${analysis.summary || 'N/A'}</p>`;
 
     if (analysis.tone) {
       const toneEmoji = { positive: '😊', tense: '😬', neutral: '😐' };
-      html += `<h3>🎭 Ton</h3><p><span class="badge">${toneEmoji[analysis.tone] || ''} ${analysis.tone}</span></p>`;
+      html += `<h3>${t('tone_header')}</h3><p><span class="badge">${toneEmoji[analysis.tone] || ''} ${analysis.tone}</span></p>`;
     }
 
     if (analysis.action_items?.length > 0) {
-      html += `<h3>✅ Aksiyon Kalemleri</h3><ul>`;
+      html += `<h3>${t('action_items_header')}</h3><ul>`;
       analysis.action_items.forEach(a => {
         html += `<li>☐ ${a.item} ${a.owner ? '<strong>→ ' + a.owner + '</strong>' : ''}</li>`;
       });
@@ -1132,11 +1321,14 @@
 
     const lists = ['key_topics','topics_discussed','went_well','went_wrong','improvements','decisions','agenda_items','feedback','growth_areas'];
     const listTitles = {
-      key_topics: '🗂 Konular', topics_discussed: '🗂 Tartışılan Konular',
-      went_well: '😊 İyi Giden', went_wrong: '😟 Kötü Giden',
-      improvements: '💡 İyileştirmeler', decisions: '⚖️ Kararlar',
-      agenda_items: '📋 Gündem', feedback: '💬 Geri Bildirim',
-      growth_areas: '📈 Gelişim Alanları'
+      key_topics: t('topics_header'), topics_discussed: t('topics_header'),
+      went_well: '😊 ' + (currentLang === 'tr' ? 'İyi Giden' : 'Went Well'), 
+      went_wrong: '😟 ' + (currentLang === 'tr' ? 'Kötü Giden' : 'Went Wrong'),
+      improvements: '💡 ' + (currentLang === 'tr' ? 'İyileştirmeler' : 'Improvements'), 
+      decisions: t('decisions_header'),
+      agenda_items: t('agenda_header'), 
+      feedback: t('feedback_header'),
+      growth_areas: t('growth_header')
     };
 
     lists.forEach(key => {
@@ -1151,7 +1343,7 @@
     });
 
     document.getElementById('summary-body').innerHTML = html;
-    document.getElementById('summary-modal').classList.add('active');
+    document.getElementById('summary-modal').querySelector('h2').textContent = t('summary_modal_title');
   }
 
   function closeSummary() {
@@ -1169,15 +1361,15 @@
       statsEl.innerHTML = `
         <div class="stat-card">
           <div class="stat-value">${meetings.length}</div>
-          <div class="stat-label">Toplam Toplantı</div>
+          <div class="stat-label">${t('total_meetings_stat')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${meetings.filter(m => m.tone === 'positive').length}</div>
-          <div class="stat-label">Pozitif Toplantı</div>
+          <div class="stat-label">${t('positive_meetings_stat')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${(meetings.reduce((s,m) => s + m.size, 0) / 1024).toFixed(1)} KB</div>
-          <div class="stat-label">Toplam Veri</div>
+          <div class="stat-label">${t('total_data_stat')}</div>
         </div>
       `;
 
@@ -1187,8 +1379,8 @@
         recentEl.innerHTML = `
           <div class="empty-state">
             <div class="icon">📭</div>
-            <h3>Henüz toplantı kaydedilmemiş</h3>
-            <p>Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.</p>
+            <h3>${t('no_meetings_recorded')}</h3>
+            <p>${t('start_recording_to_create')}</p>
           </div>`;
         return;
       }
@@ -1207,12 +1399,15 @@
       const meetings = await resp.json();
       const el = document.getElementById('meetings-list');
 
+      document.getElementById('page-meetings').querySelector('h2').textContent = t('all_meetings');
+      document.getElementById('page-meetings').querySelector('.btn-primary').textContent = t('new_recording');
+
       if (meetings.length === 0) {
         el.innerHTML = `
           <div class="empty-state">
             <div class="icon">📭</div>
-            <h3>Toplantı bulunamadı</h3>
-            <p>Henüz kaydedilmiş bir toplantı yok.</p>
+            <h3>${t('no_meetings_recorded')}</h3>
+            <p>${t('start_recording_to_create')}</p>
           </div>`;
         return;
       }
@@ -1226,12 +1421,14 @@
   function renderMeetingCard(m) {
     const toneClass = m.tone === 'positive' ? 'badge-positive' : m.tone === 'tense' ? 'badge-tense' : 'badge-neutral';
     const toneEmoji = m.tone === 'positive' ? '😊' : m.tone === 'tense' ? '😬' : '😐';
+    const summaryText = m.summary || (currentLang === 'tr' ? 'Özet mevcut değil' : 'No summary available');
+    
     return `
       <div class="card meeting-card" onclick="navigate('detail', '${m.id}')">
         <div>
           <div class="meeting-date">📅 ${m.date}</div>
           <div class="meeting-title">${m.id.replace('meeting_', '').replace(/T/g, ' ').replace(/-/g, ':').slice(0, 16)}</div>
-          <div class="meeting-summary">${m.summary || 'Özet mevcut değil'}</div>
+          <div class="meeting-summary">${summaryText}</div>
         </div>
         <div class="meeting-meta">
           <span class="badge">${m.duration}</span>
@@ -1248,13 +1445,14 @@
       if (!resp.ok) throw new Error('Not found');
       const data = await resp.json();
 
+      document.getElementById('detail-back-btn').textContent = t('detail_back');
       document.getElementById('detail-title').textContent = id.replace('meeting_', '').replace(/T/g, ' ');
       document.getElementById('detail-content').innerHTML = markdownToHtml(data.content);
     } catch (err) {
       document.getElementById('detail-content').innerHTML = `
         <div class="empty-state">
           <div class="icon">❌</div>
-          <h3>Toplantı bulunamadı</h3>
+          <h3>${t('meeting_not_found')}</h3>
         </div>`;
     }
   }
@@ -1265,7 +1463,7 @@
     if (!query) return;
 
     const el = document.getElementById('search-results');
-    el.innerHTML = '<div style="text-align:center; color: var(--text-muted); padding: 2rem;">Aranıyor...</div>';
+    el.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 2rem;">${t('searching')}</div>`;
 
     try {
       const resp = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
@@ -1275,21 +1473,21 @@
         el.innerHTML = `
           <div class="empty-state">
             <div class="icon">🔍</div>
-            <h3>"${escapeHtml(query)}" için sonuç bulunamadı</h3>
+            <h3>"${escapeHtml(query)}" ${t('no_search_results')}</h3>
           </div>`;
         return;
       }
 
-      el.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">${results.length} toplantıda ${results.reduce((s,r) => s + r.matchCount, 0)} eşleşme bulundu</div>`;
+      el.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">${results.length} toplantıda ${results.reduce((s,r) => s + r.matchCount, 0)} ${t('matches_found')}</div>`;
       el.innerHTML += results.map(r => `
         <div class="search-result" onclick="navigate('detail', '${r.id}')">
           <div class="result-file">📄 ${r.filename}</div>
-          <div class="result-date">${r.date || ''} · ${r.matchCount} eşleşme</div>
+          <div class="result-date">${r.date || ''} · ${r.matchCount} ${t('matches_found')}</div>
           ${r.matches.map(m => `<div class="result-match">${highlightText(escapeHtml(m.text), query)}</div>`).join('')}
         </div>
       `).join('');
     } catch (err) {
-      el.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Arama hatası</h3><p>${err.message}</p></div>`;
+      el.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>${t('search_error')}</h3><p>${err.message}</p></div>`;
     }
   }
 
@@ -1306,10 +1504,14 @@
   }
 
   function markdownToHtml(md) {
+    const tr = currentLang === 'tr';
     return md
       .replace(/^# (.+)$/gm, '<h1>$1</h1>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*Date:\*\*\s*(.+)/gm, `<strong>${tr ? 'Tarih' : 'Date'}:</strong> $1`)
+      .replace(/\*\*Duration:\*\*\s*(.+)/gm, `<strong>${tr ? 'Süre' : 'Duration'}:</strong> $1`)
+      .replace(/\*\*Tone:\*\*\s*(.+)/gm, `<strong>${tr ? 'Ton' : 'Tone'}:</strong> $1`)
       .replace(/\*\*(.+?):\*\*\s*(.+)/gm, '<p><strong>$1:</strong> $2</p>')
       .replace(/\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
       .replace(/^---$/gm, '<hr>')

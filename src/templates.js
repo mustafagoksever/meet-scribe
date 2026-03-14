@@ -101,6 +101,7 @@ Rules:
 
   oneone: {
     name: '1:1 Meeting',
+    description: 'Birebir görüşme özeti',
     systemPrompt: `You are an assistant that analyzes 1:1 meeting notes.
 Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
@@ -125,21 +126,86 @@ Rules:
 /**
  * Get system prompt by template name
  */
-export function getTemplate(templateName) {
-  const template = TEMPLATES[templateName];
-  if (!template) {
+export function getTemplate(templateName, lang = 'tr') {
+  const baseTemplate = TEMPLATES[templateName];
+  if (!baseTemplate) {
     const available = Object.keys(TEMPLATES).join(', ');
     throw new Error(`Unknown template: "${templateName}". Available: ${available}`);
   }
+
+  // Clone to avoid mutating original
+  const template = { ...baseTemplate };
+
+  const langText = lang === 'en' ? 'ENGLISH' : 'TURKISH (Türkçe)';
+  template.systemPrompt += `\n\nCRITICAL: All generated content (summary, items, topics) MUST be in ${langText}. Do not use any other language for the values in the JSON.`;
+
+  // Localize name
+  if (lang === 'tr') {
+    const names = {
+      'General Meeting': 'Genel Toplantı',
+      'Daily Standup': 'Günlük Standup',
+      'Retrospective': 'Retrospektif',
+      'Decision Meeting': 'Karar Toplantısı',
+      '1:1 Meeting': '1:1 Görüşme'
+    };
+    template.name = names[template.name] || template.name;
+  }
+
   return template;
 }
 
 /**
  * List available templates
  */
-export function listTemplates() {
-  return Object.entries(TEMPLATES).map(([key, val]) => ({
-    key,
-    name: val.name,
-  }));
+export function listTemplates(lang = 'tr') {
+  return Object.entries(TEMPLATES).map(([key, val]) => {
+    let name = val.name;
+    let desc = val.description || '';
+
+    if (lang === 'tr') {
+      const trNames = {
+        'General Meeting': 'Genel Toplantı',
+        'Daily Standup': 'Günlük Standup',
+        'Retrospective': 'Retrospektif',
+        'Decision Meeting': 'Karar Toplantısı',
+        '1:1 Meeting': '1:1 Görüşme'
+      };
+      const trDescs = {
+        'General Meeting': 'Genel toplantı özeti',
+        'Daily Standup': 'Dün/Bugün/Engel takibi',
+        'Retrospective': 'İyi/Kötü/Gelişim takibi',
+        'Decision Meeting': 'Alınan kararlar ve nedenleri',
+        '1:1 Meeting': 'Birebir görüşme ve geri bildirim'
+      };
+      name = trNames[name] || name;
+      desc = trDescs[val.name] || desc;
+    } else {
+      const enDescs = {
+        'General Meeting': 'General meeting summary',
+        'Daily Standup': 'Daily standup tracking',
+        'Retrospective': 'What went well/wrong',
+        'Decision Meeting': 'Key decisions and rationale',
+        '1:1 Meeting': 'Performance and feedback'
+      };
+      desc = enDescs[val.name] || desc || val.name;
+    }
+
+    return {
+      key,
+      name,
+      description: desc,
+      icon: getIcon(key)
+    };
+  });
+}
+
+function getIcon(key) {
+  const icons = {
+    default: '📋',
+    standup: '🌅',
+    retro: '🔄',
+    decision: '⚖️',
+    oneone: '👥'
+  };
+  return icons[key] || '📝';
 }

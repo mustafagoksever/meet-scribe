@@ -77,10 +77,11 @@ export async function handleRecord(opts) {
       });
     });
 
-    // Apply template from web selection
+    // Apply template and language from web selection
     if (startData.template) {
       config.template = startData.template;
-      console.log(chalk.green(`✓ Template selected: ${config.template}`));
+      config.lang = startData.lang || 'tr';
+      console.log(chalk.green(`✓ Template selected: ${config.template} [${config.lang}]`));
     }
   }
 

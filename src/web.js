@@ -148,26 +148,9 @@ export function startWebServer(port, config) {
    * GET /api/templates — List available templates
    */
   app.get('/api/templates', (req, res) => {
-    const templates = listTemplates();
-    const descriptions = {
-      default: 'Genel toplantı özeti, konular ve aksiyon kalemleri',
-      standup: 'Daily standup: dün, bugün, blocker\'lar',
-      retro: 'Retrospektif: iyi giden, kötü giden, iyileştirmeler',
-      decision: 'Karar toplantısı: gündem, kararlar, gerekçeler',
-      oneone: '1:1 görüşme: geri bildirim, gelişim alanları',
-    };
-    const icons = {
-      default: '📋',
-      standup: '🏃',
-      retro: '🔄',
-      decision: '⚖️',
-      oneone: '👥',
-    };
-    res.json(templates.map(t => ({
-      ...t,
-      description: descriptions[t.key] || '',
-      icon: icons[t.key] || '📋',
-    })));
+    const lang = req.query.lang || 'tr';
+    const templates = listTemplates(lang);
+    res.json(templates);
   });
 
   // ── WebSocket ─────────────────────────────
@@ -180,7 +163,10 @@ export function startWebServer(port, config) {
         const data = JSON.parse(message);
         if (data.type === 'action') {
           if (data.payload === 'start') {
-            webEvents.emit('start', { template: data.template || 'default' });
+            webEvents.emit('start', { 
+              template: data.template || 'default',
+              lang: data.lang || 'tr'
+            });
           } else {
             webEvents.emit(data.payload); // 'pause', 'resume', 'stop'
           }
