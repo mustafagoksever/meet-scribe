@@ -2,10 +2,12 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import EventEmitter from 'events';
 import open from 'open';
+import { listTemplates } from './templates.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,17 +15,162 @@ const __dirname = path.dirname(__filename);
 let wss = null;
 export const webEvents = new EventEmitter();
 
-export function startWebServer(port) {
+export function startWebServer(port, config) {
   const app = express();
   const server = http.createServer(app);
   wss = new WebSocketServer({ server });
 
   const publicDir = path.join(__dirname, '..', 'public');
+  const outputDir = path.resolve(config?.output || './meet-scribe-output');
+
   app.use(express.static(publicDir));
+  app.use(express.json());
 
   app.get('/', (req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
   });
+
+  // ── REST API ─────────────────────────────
+
+  /**
+   * GET /api/meetings — List all meetings
+   */
+  app.get('/api/meetings', (req, res) => {
+    try {
+      if (!fs.existsSync(outputDir)) {
+        return res.json([]);
+      }
+
+      const files = fs.readdirSync(outputDir)
+        .filter(f => f.startsWith('meeting_') && f.endsWith('.md'))
+        .sort()
+        .reverse();
+
+      const meetings = files.map(file => {
+        const filePath = path.join(outputDir, file);
+        const stat = fs.statSync(filePath);
+        const content = fs.readFileSync(filePath, 'utf-8');
+
+        const dateMatch = content.match(/\*\*Date:\*\*\s*(.+)/);
+        const durMatch = content.match(/\*\*Duration:\*\*\s*(.+)/);
+        const toneMatch = content.match(/\*\*Tone:\*\*\s*(.+)/);
+        const summaryMatch = content.match(/## 📌 Summary\s*\n\s*\n(.+)/);
+
+        return {
+          id: file.replace('.md', ''),
+          filename: file,
+          date: dateMatch ? dateMatch[1].trim() : stat.mtime.toISOString(),
+          duration: durMatch ? durMatch[1].trim() : '?',
+          tone: toneMatch ? toneMatch[1].trim() : 'neutral',
+          summary: summaryMatch ? summaryMatch[1].trim().slice(0, 200) : '',
+          size: stat.size,
+        };
+      });
+
+      res.json(meetings);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * GET /api/meetings/:id — Get single meeting content
+   */
+  app.get('/api/meetings/:id', (req, res) => {
+    try {
+      const filename = req.params.id.endsWith('.md') ? req.params.id : `${req.params.id}.md`;
+      const filePath = path.join(outputDir, filename);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+
+      const content = fs.readFileSync(filePath, 'utf-8');
+      res.json({ id: req.params.id, filename, content });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * GET /api/search?q=query — Search across meetings
+   */
+  app.get('/api/search', (req, res) => {
+    try {
+      const query = req.query.q;
+      if (!query) return res.json([]);
+
+      if (!fs.existsSync(outputDir)) {
+        return res.json([]);
+      }
+
+      const files = fs.readdirSync(outputDir)
+        .filter(f => f.startsWith('meeting_') && f.endsWith('.md'))
+        .sort()
+        .reverse();
+
+      const queryLower = query.toLowerCase();
+      const results = [];
+
+      for (const file of files) {
+        const filePath = path.join(outputDir, file);
+        const content = fs.readFileSync(filePath, 'utf-8');
+
+        if (content.toLowerCase().includes(queryLower)) {
+          const lines = content.split('\n');
+          const matches = [];
+
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].toLowerCase().includes(queryLower)) {
+              matches.push({ lineNum: i + 1, text: lines[i].trim() });
+            }
+          }
+
+          const dateMatch = content.match(/\*\*Date:\*\*\s*(.+)/);
+
+          results.push({
+            id: file.replace('.md', ''),
+            filename: file,
+            date: dateMatch ? dateMatch[1].trim() : '',
+            matchCount: matches.length,
+            matches: matches.slice(0, 5),
+          });
+        }
+      }
+
+      res.json(results);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * GET /api/templates — List available templates
+   */
+  app.get('/api/templates', (req, res) => {
+    const templates = listTemplates();
+    const descriptions = {
+      default: 'Genel toplantı özeti, konular ve aksiyon kalemleri',
+      standup: 'Daily standup: dün, bugün, blocker\'lar',
+      retro: 'Retrospektif: iyi giden, kötü giden, iyileştirmeler',
+      decision: 'Karar toplantısı: gündem, kararlar, gerekçeler',
+      oneone: '1:1 görüşme: geri bildirim, gelişim alanları',
+    };
+    const icons = {
+      default: '📋',
+      standup: '🏃',
+      retro: '🔄',
+      decision: '⚖️',
+      oneone: '👥',
+    };
+    res.json(templates.map(t => ({
+      ...t,
+      description: descriptions[t.key] || '',
+      icon: icons[t.key] || '📋',
+    })));
+  });
+
+  // ── WebSocket ─────────────────────────────
 
   wss.on('connection', (ws) => {
     ws.send(JSON.stringify({ type: 'status', payload: 'Connected to MeetScribe Web Dashboard' }));
@@ -32,7 +179,11 @@ export function startWebServer(port) {
       try {
         const data = JSON.parse(message);
         if (data.type === 'action') {
-          webEvents.emit(data.payload); // 'pause', 'resume', 'stop'
+          if (data.payload === 'start') {
+            webEvents.emit('start', { template: data.template || 'default' });
+          } else {
+            webEvents.emit(data.payload); // 'pause', 'resume', 'stop'
+          }
         }
       } catch (err) {
         // ignore

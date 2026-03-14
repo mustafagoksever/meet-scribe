@@ -1,206 +1,518 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MeetScribe Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #09090b;
       --bg-surface: #18181b;
-      --bg-card: #27272a;
+      --bg-card: #1e1e22;
+      --bg-card-hover: #27272a;
       --text: #fafafa;
-      --text-muted: #a1a1aa;
+      --text-secondary: #d4d4d8;
+      --text-muted: #71717a;
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.4);
-      --border: #3f3f46;
+      --accent-light: #60a5fa;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --accent-glow-strong: rgba(59, 130, 246, 0.3);
+      --border: #27272a;
+      --border-light: #3f3f46;
       --success: #10b981;
       --warning: #f59e0b;
       --danger: #ef4444;
+      --purple: #a78bfa;
+      --pink: #f472b6;
+      --gradient-primary: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      --gradient-card: linear-gradient(145deg, rgba(59,130,246,0.05), rgba(139,92,246,0.05));
+      --radius: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.3);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.3);
+      --shadow-glow: 0 0 30px rgba(59,130,246,0.15);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    header {
-      background: var(--bg-surface);
+    /* ── Top Navigation ─────────────────── */
+    .navbar {
+      background: rgba(24, 24, 27, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
+      padding: 0 2rem;
+      height: 64px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      z-index: 10;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
     }
 
     .brand {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      background: var(--gradient-primary);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      cursor: pointer;
+      text-decoration: none;
     }
 
-    .controls {
+    .brand svg { -webkit-text-fill-color: initial; color: var(--accent); }
+
+    .nav-links {
       display: flex;
-      gap: 0.5rem;
-      align-items: center;
+      gap: 0.25rem;
     }
 
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-link.active { color: var(--accent-light); background: var(--accent-glow); }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .conn-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .conn-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .conn-dot.recording { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: pulse 2s infinite; }
+    .conn-dot.paused { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+      100% { transform: scale(0.95); }
+    }
+
+    /* ── Page Container ─────────────────── */
+    .page { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Buttons ─────────────────────────── */
     .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border-light);
+      background: var(--bg-card);
+      color: var(--text);
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--bg-card-hover); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: var(--gradient-primary);
+      border: none;
+      color: white;
+      font-weight: 600;
+      box-shadow: var(--shadow-glow);
+    }
+    .btn-primary:hover { box-shadow: 0 0 40px rgba(59,130,246,0.3); transform: translateY(-2px); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      border-color: rgba(239,68,68,0.2);
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    .btn-lg { padding: 0.8rem 2rem; font-size: 1.1rem; border-radius: 14px; }
+
+    /* ── Search Bar ──────────────────────── */
+    .search-bar {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .search-bar input {
+      width: 100%;
       background: var(--bg-card);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      padding: 0.7rem 1rem 0.7rem 2.8rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
       transition: all 0.2s;
     }
+    .search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .search-bar input::placeholder { color: var(--text-muted); }
 
-    .btn:hover { background: var(--border); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn-danger {
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--danger);
-      border-color: rgba(239, 68, 68, 0.2);
+    .search-bar .search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
     }
-    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
 
-    .status-indicator {
-      display: flex;
-      align-items: center;
+    /* ── Cards ────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      transition: all 0.25s;
+      cursor: pointer;
+    }
+    .card:hover {
+      border-color: var(--border-light);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .meeting-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
       gap: 0.5rem;
-      font-weight: 500;
-      font-size: 0.9rem;
+      align-items: start;
     }
 
-    .dot {
-      width: 10px;
-      height: 10px;
-      background: var(--text-muted);
-      border-radius: 50%;
-      box-shadow: 0 0 10px transparent;
-      transition: all 0.3s ease;
+    .meeting-card .meeting-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
     }
 
-    .dot.recording {
-      background: var(--danger);
-      box-shadow: 0 0 10px var(--danger);
-      animation: pulse 2s infinite;
+    .meeting-card .meeting-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
     }
 
-    .dot.paused {
-      background: var(--warning);
-      box-shadow: 0 0 10px var(--warning);
-    }
-
-    .dot.connected {
-      background: var(--success);
-      box-shadow: 0 0 10px var(--success);
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
+    .meeting-card .meeting-summary {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .sidebar {
-      width: 350px;
-      background: var(--bg-surface);
-      border-right: 1px solid var(--border);
+    .meeting-card .meeting-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      justify-self: end;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .badge-positive { background: rgba(16,185,129,0.1); color: var(--success); }
+    .badge-tense { background: rgba(239,68,68,0.1); color: var(--danger); }
+    .badge-neutral { background: rgba(245,158,11,0.1); color: var(--warning); }
+
+    /* ── HOME PAGE ────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 4rem 0 3rem;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 500px;
+      margin: 0 auto 2rem;
+    }
+
+    .hero .btn-start {
+      padding: 1rem 3rem;
+      font-size: 1.2rem;
+      border-radius: 16px;
+      gap: 0.8rem;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .recent-meetings {
       display: flex;
       flex-direction: column;
-      z-index: 5;
+      gap: 0.75rem;
+      margin-bottom: 3rem;
     }
 
-    .panel-header {
-      padding: 1rem;
-      font-weight: 600;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
+    .home-search {
+      max-width: 600px;
+      margin: 0 auto 3rem;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-card {
+      background: var(--gradient-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+
+    /* ── MEETINGS LIST PAGE ──────────────── */
+    .page-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
     }
 
-    .participants {
-      padding: 1rem;
-      flex: 1;
+    .page-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .meetings-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* ── MEETING DETAIL PAGE ─────────────── */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .detail-back {
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      font-size: 1.2rem;
+    }
+    .detail-back:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+    .detail-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      line-height: 1.8;
+    }
+
+    .detail-content h1 { font-size: 1.5rem; color: var(--accent-light); margin-bottom: 0.5rem; }
+    .detail-content h2 { font-size: 1.2rem; color: var(--text); margin-top: 1.5rem; margin-bottom: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .detail-content h3 { font-size: 1rem; color: var(--text-secondary); margin-top: 1rem; }
+    .detail-content p { color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .detail-content strong { color: var(--text); }
+    .detail-content ul { padding-left: 1.5rem; }
+    .detail-content li { color: var(--text-secondary); margin-bottom: 0.3rem; }
+    .detail-content hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+    /* ── RECORDING PAGE ──────────────────── */
+    .recording-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      height: calc(100vh - 64px - 4rem);
+    }
+
+    .recording-sidebar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.2rem;
       overflow-y: auto;
+    }
+
+    .recording-sidebar .panel-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
     }
 
     .speaker-tag {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-bottom: 0.8rem;
-      font-size: 0.95rem;
-      padding: 0.4rem 0.8rem;
-      background: rgba(255,255,255,0.05);
+      margin-bottom: 0.6rem;
+      font-size: 0.9rem;
+      padding: 0.5rem 0.7rem;
+      background: rgba(255,255,255,0.03);
       border-radius: 8px;
+      border: 1px solid var(--border);
     }
 
-    .speaker-color {
-      width: 12px;
-      height: 12px;
+    .speaker-dot {
+      width: 10px; height: 10px;
       border-radius: 50%;
+      flex-shrink: 0;
     }
 
-    .main-content {
-      flex: 1;
+    .recording-main {
       display: flex;
       flex-direction: column;
-      background: var(--bg);
     }
 
-    .transcripts-container {
+    .recording-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0.8rem 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      align-items: center;
+    }
+
+    .recording-controls .rec-status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .transcript-feed {
       flex: 1;
-      padding: 2rem;
       overflow-y: auto;
-      scroll-behavior: smooth;
+      padding: 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
     }
 
     .transcript-item {
       margin-bottom: 1rem;
       display: flex;
       flex-direction: column;
-      animation: fadeIn 0.4s ease-out;
+      animation: slideIn 0.3s ease-out;
       border-left: 3px solid transparent;
       padding-left: 1rem;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
     }
 
     .transcript-meta {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
       margin-bottom: 0.2rem;
       display: flex;
@@ -208,18 +520,17 @@
     }
 
     .transcript-text {
-      font-size: 1.1rem;
+      font-size: 1rem;
       line-height: 1.5;
       background: var(--bg-card);
-      padding: 1rem 1.2rem;
+      padding: 0.8rem 1rem;
       border-radius: 8px;
       display: inline-block;
       max-width: 90%;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      border: 1px solid rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
     }
 
-    .empty-state {
+    .empty-feed {
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -227,359 +538,815 @@
       justify-content: center;
       color: var(--text-muted);
       text-align: center;
+      gap: 0.5rem;
+    }
+    .empty-feed .icon { font-size: 3rem; opacity: 0.5; }
+
+    /* ── SEARCH RESULTS ──────────────────── */
+    .search-result {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .search-result:hover { border-color: var(--border-light); background: var(--bg-card-hover); }
+
+    .search-result .result-file {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.3rem;
     }
 
-    .empty-state svg {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 1rem;
-      opacity: 0.5;
+    .search-result .result-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
     }
 
-    .summary-modal {
+    .search-result .result-match {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      padding: 0.3rem 0;
+      border-left: 2px solid var(--accent);
+      padding-left: 0.8rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .result-match mark {
+      background: rgba(59,130,246,0.3);
+      color: var(--accent-light);
+      padding: 0.1rem 0.2rem;
+      border-radius: 3px;
+    }
+
+    /* ── TEMPLATE MODAL ──────────────────── */
+    .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.8);
-      backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 50;
+      z-index: 200;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s;
     }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
 
-    .summary-modal.active {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .summary-content {
+    .modal-box {
       background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
       width: 90%;
-      max-width: 800px;
-      max-height: 80vh;
-      overflow-y: auto;
+      max-width: 700px;
       padding: 2rem;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-      transform: translateY(20px);
+      box-shadow: var(--shadow-lg);
+      transform: scale(0.95);
       transition: transform 0.3s;
     }
+    .modal-overlay.active .modal-box { transform: scale(1); }
 
-    .summary-modal.active .summary-content {
-      transform: translateY(0);
-    }
-
-    .summary-header {
+    .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
     }
 
-    .summary-title {
-      font-size: 1.5rem;
-      color: var(--accent);
+    .modal-header h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
     }
 
-    .btn-close {
-      background: transparent;
+    .modal-close {
+      background: none;
       border: none;
       color: var(--text-muted);
       cursor: pointer;
       font-size: 1.5rem;
+      padding: 0.3rem;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.8rem;
     }
 
-    .btn-close:hover { color: var(--text); }
+    .template-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .template-card:hover { border-color: var(--accent); background: var(--accent-glow); transform: translateY(-2px); }
+    .template-card.selected { border-color: var(--accent); background: var(--accent-glow-strong); box-shadow: var(--shadow-glow); }
 
-    .summary-body h3 {
+    .template-card .tpl-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .template-card .tpl-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .template-card .tpl-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
       margin-top: 1.5rem;
-      margin-bottom: 0.5rem;
-      color: var(--text);
     }
-    
-    .summary-body p, .summary-body li {
+
+    /* ── Summary Modal ───────────────────── */
+    .summary-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .summary-overlay.active { opacity: 1; pointer-events: all; }
+
+    .summary-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      width: 90%; max-width: 800px; max-height: 80vh;
+      overflow-y: auto; padding: 2rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .summary-box h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text); }
+    .summary-box p, .summary-box li { color: var(--text-secondary); margin-bottom: 0.4rem; }
+    .summary-box ul { padding-left: 1.5rem; }
+
+    /* ── Empty State ─────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
       color: var(--text-muted);
-      margin-bottom: 0.5rem;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-secondary); }
+
+    /* ── Responsive ──────────────────────── */
+    @media (max-width: 768px) {
+      .navbar { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .page { padding: 1rem; }
+      .hero h1 { font-size: 2rem; }
+      .recording-layout { grid-template-columns: 1fr; }
+      .recording-sidebar { display: none; }
+      .templates-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
 
-    .summary-body ul {
-      padding-left: 1.5rem;
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
-
-    .badge {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      background: rgba(255,255,255,0.1);
+    @keyframes slideOutRight {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
     }
-
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-        <line x1="12" y1="19" x2="12" y2="23"></line>
-        <line x1="8" y1="23" x2="16" y2="23"></line>
-      </svg>
-      MeetScribe
-    </div>
-    
-    <div class="controls">
-      <button id="btn-pause" class="btn" onclick="togglePause()">⏸ Pause</button>
-      <button id="btn-stop" class="btn btn-danger" onclick="stopRecording()">⏹ Stop</button>
-      
-      <div style="width: 1px; height: 24px; background: var(--border); margin: 0 1rem;"></div>
-      
-      <div class="status-indicator">
-        <div id="conn-dot" class="dot"></div>
-        <span id="conn-status">Connecting...</span>
+  <!-- ── Navbar ─────────────────────────── -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <a class="brand" onclick="navigate('home')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+        MeetScribe
+      </a>
+      <div class="nav-links">
+        <button class="nav-link active" data-page="home" onclick="navigate('home')">🏠 Ana Sayfa</button>
+        <button class="nav-link" data-page="meetings" onclick="navigate('meetings')">📋 Toplantılar</button>
+        <button class="nav-link" data-page="search" onclick="navigate('search')">🔍 Arama</button>
       </div>
     </div>
-  </header>
+    <div class="navbar-right">
+      <div class="conn-badge">
+        <div class="conn-dot" id="conn-dot"></div>
+        <span id="conn-status">Bağlanıyor...</span>
+      </div>
+    </div>
+  </nav>
 
-  <div class="container">
-    <div class="sidebar">
-      <div class="panel-header">
-        <span>Participants</span>
-        <span class="badge" id="speaker-count">0</span>
-      </div>
-      <div class="participants" id="participants-list">
-        <!-- Speakers populated dynamically -->
-        <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; margin-top: 2rem;">Waiting for speech...</div>
+  <!-- ── HOME PAGE ─────────────────────── -->
+  <div class="page active" id="page-home">
+    <div class="hero">
+      <h1>🎙 MeetScribe</h1>
+      <p>Toplantılarınızı kaydedin, yazıya dökün ve akıllı özetler oluşturun.</p>
+      <button class="btn btn-primary btn-start btn-lg" onclick="openTemplateModal()">
+        ▶ Yeni Kayıt Başlat
+      </button>
+    </div>
+
+    <div class="stats-row" id="home-stats">
+      <!-- JS fills -->
+    </div>
+
+    <div class="home-search">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="home-search-input" placeholder="Toplantılarda ara..." onkeydown="if(event.key==='Enter'){navigate('search');document.getElementById('search-input').value=this.value;doSearch()}">
       </div>
     </div>
 
-    <div class="main-content">
-      <div class="transcripts-container" id="transcript-box">
-        <div class="empty-state" id="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          <h2>Ready to Transcribe</h2>
-          <p>Listening to meeting audio...</p>
+    <div class="section-title">📅 Son Toplantılar</div>
+    <div class="recent-meetings" id="recent-meetings">
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <h3>Henüz toplantı kaydedilmemiş</h3>
+        <p>Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MEETINGS LIST PAGE ────────────── -->
+  <div class="page" id="page-meetings">
+    <div class="page-header">
+      <h2>📋 Tüm Toplantılar</h2>
+      <button class="btn btn-primary" onclick="openTemplateModal()">▶ Yeni Kayıt</button>
+    </div>
+    <div class="meetings-grid" id="meetings-list">
+      <!-- JS fills -->
+    </div>
+  </div>
+
+  <!-- ── SEARCH PAGE ───────────────────── -->
+  <div class="page" id="page-search">
+    <div class="page-header">
+      <h2>🔍 Arama</h2>
+    </div>
+    <div class="search-bar" style="max-width: 100%; margin-bottom: 1.5rem;">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Toplantı içeriklerinde ara..." onkeydown="if(event.key==='Enter')doSearch()">
+    </div>
+    <div id="search-results">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <h3>Aramak istediğiniz kelimeyi girin</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MEETING DETAIL PAGE ─────────── -->
+  <div class="page" id="page-detail">
+    <div class="detail-header">
+      <button class="detail-back" onclick="navigate('meetings')">← Geri</button>
+      <h2 id="detail-title">Toplantı Detayı</h2>
+    </div>
+    <div class="detail-content" id="detail-content">
+      <!-- JS fills -->
+    </div>
+  </div>
+
+  <!-- ── RECORDING PAGE ──────────────── -->
+  <div class="page" id="page-recording">
+    <div class="recording-layout">
+      <div class="recording-sidebar">
+        <div class="panel-title">
+          <span>Konuşmacılar</span>
+          <span class="badge" id="speaker-count">0</span>
+        </div>
+        <div id="participants-list">
+          <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">Ses bekleniyor...</div>
+        </div>
+      </div>
+      <div class="recording-main">
+        <div class="recording-controls">
+          <button id="btn-pause" class="btn" onclick="togglePause()" disabled>⏸ Duraklat</button>
+          <button id="btn-stop" class="btn btn-danger" onclick="stopRecording()" disabled>⏹ Durdur</button>
+          <div class="rec-status">
+            <div class="conn-dot" id="rec-dot"></div>
+            <span id="rec-status">Bekleme...</span>
+          </div>
+        </div>
+        <div class="transcript-feed" id="transcript-box">
+          <div class="empty-feed" id="empty-feed">
+            <div class="icon">🎙</div>
+            <h3>Kayda hazır</h3>
+            <p>Toplantı sesini dinliyor...</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="summary-modal" id="summary-modal">
-    <div class="summary-content">
-      <div class="summary-header">
-        <div class="summary-title" id="summary-title">Meeting Completed</div>
-        <button class="btn-close" onclick="closeSummary()">×</button>
+  <!-- ── Template Selection Modal ─────── -->
+  <div class="modal-overlay" id="template-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>📋 Toplantı Şablonu Seçin</h2>
+        <button class="modal-close" onclick="closeTemplateModal()">×</button>
       </div>
-      <div class="summary-body" id="summary-body">
-        <!-- Populated via JS -->
-        Generating analysis...
+      <div class="templates-grid" id="templates-grid">
+        <!-- JS fills -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeTemplateModal()">İptal</button>
+        <button class="btn btn-primary" id="btn-start-recording" onclick="startRecordingWithTemplate()">▶ Kayda Başla</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const transcriptBox = document.getElementById('transcript-box');
-    const emptyState = document.getElementById('empty-state');
-    const participantsList = document.getElementById('participants-list');
-    const speakerCount = document.getElementById('speaker-count');
-    const connDot = document.getElementById('conn-dot');
-    const connStatus = document.getElementById('conn-status');
-    const summaryModal = document.getElementById('summary-modal');
-    const summaryBody = document.getElementById('summary-body');
-    const btnPause = document.getElementById('btn-pause');
-    const btnStop = document.getElementById('btn-stop');
+  <!-- ── Summary Modal ───────────────── -->
+  <div class="summary-overlay" id="summary-modal">
+    <div class="summary-box">
+      <div class="modal-header">
+        <h2>📊 Toplantı Özeti</h2>
+        <button class="modal-close" onclick="closeSummary()">×</button>
+      </div>
+      <div id="summary-body">Analiz oluşturuluyor...</div>
+    </div>
+  </div>
 
-    const knownSpeakers = new Set();
-    let isPausedLocally = false;
-    let wsConnection = null;
-    
-    // Connect to WebSocket
-    function connect() {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsConnection = new WebSocket(`${protocol}//${window.location.host}`);
+<script>
+  // ── State ──────────────────────────────
+  let wsConnection = null;
+  let currentPage = 'home';
+  let selectedTemplate = 'default';
+  let isPausedLocally = false;
+  const knownSpeakers = new Set();
+  const SPEAKER_COLORS = ['#22d3ee','#4ade80','#d946ef','#facc15','#60a5fa','#f87171','#e879f9','#34d399','#38bdf8','#fb923c'];
 
-      wsConnection.onopen = () => {
-        connDot.className = 'dot connected';
-        connStatus.textContent = 'Standby';
-      };
+  // ── Router ─────────────────────────────
+  function navigate(page, data) {
+    currentPage = page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
 
-      wsConnection.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleMessage(data);
-        } catch (e) {
-          console.error("Parse error", e);
-        }
-      };
-
-      wsConnection.onclose = () => {
-        connDot.className = 'dot';
-        connStatus.textContent = 'Disconnected';
-        setTimeout(connect, 2000); // Reconnect
-      };
+    const pageEl = document.getElementById(`page-${page}`);
+    if (pageEl) {
+      pageEl.classList.add('active');
+      pageEl.style.animation = 'none';
+      pageEl.offsetHeight; // trigger reflow
+      pageEl.style.animation = '';
     }
 
-    function handleMessage(data) {
-      if (emptyState) emptyState.style.display = 'none';
+    const navBtn = document.querySelector(`.nav-link[data-page="${page}"]`);
+    if (navBtn) navBtn.classList.add('active');
 
-      switch (data.type) {
-        case 'status':
-          if (data.payload === 'Recording started') {
-            connDot.className = 'dot recording';
-            connStatus.textContent = 'Recording live...';
-            btnPause.disabled = false;
-            btnStop.disabled = false;
-            isPausedLocally = false;
-            btnPause.innerHTML = '⏸ Pause';
-          }
-          break;
-        case 'pause':
-          connDot.className = 'dot paused';
-          connStatus.textContent = 'Paused';
-          isPausedLocally = true;
-          btnPause.innerHTML = '▶ Resume';
-          break;
-        case 'resume':
-          connDot.className = 'dot recording';
-          connStatus.textContent = 'Recording live...';
+    // Load data for pages
+    if (page === 'home') loadHome();
+    if (page === 'meetings') loadMeetings();
+    if (page === 'detail' && data) loadMeetingDetail(data);
+  }
+
+  // ── WebSocket ──────────────────────────
+  function connect() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsConnection = new WebSocket(`${protocol}//${window.location.host}`);
+
+    wsConnection.onopen = () => {
+      document.getElementById('conn-dot').className = 'conn-dot connected';
+      document.getElementById('conn-status').textContent = 'Bağlandı';
+    };
+
+    wsConnection.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWSMessage(data);
+      } catch (e) {
+        console.error("Parse error", e);
+      }
+    };
+
+    wsConnection.onclose = () => {
+      document.getElementById('conn-dot').className = 'conn-dot';
+      document.getElementById('conn-status').textContent = 'Bağlantı kesildi';
+      setTimeout(connect, 2000);
+    };
+  }
+
+  function handleWSMessage(data) {
+    switch (data.type) {
+      case 'status':
+        if (data.payload === 'Recording started') {
+          document.getElementById('conn-dot').className = 'conn-dot recording';
+          document.getElementById('conn-status').textContent = 'Kayıt yapılıyor...';
+          document.getElementById('rec-dot').className = 'conn-dot recording';
+          document.getElementById('rec-status').textContent = 'Kayıt aktif';
+          document.getElementById('btn-pause').disabled = false;
+          document.getElementById('btn-stop').disabled = false;
           isPausedLocally = false;
-          btnPause.innerHTML = '⏸ Pause';
-          break;
-        case 'transcript':
-          addTranscript(data.payload);
-          break;
-        case 'summary':
-          showSummary(data.payload);
-          break;
-        case 'end':
-          connDot.className = 'dot connected';
-          connStatus.textContent = 'Recording ended';
-          btnPause.disabled = true;
-          btnStop.disabled = true;
-          break;
+          // Switch to recording page if not already there
+          if (currentPage !== 'recording') navigate('recording');
+        }
+        break;
+      case 'pause':
+        document.getElementById('conn-dot').className = 'conn-dot paused';
+        document.getElementById('conn-status').textContent = 'Duraklatıldı';
+        document.getElementById('rec-dot').className = 'conn-dot paused';
+        document.getElementById('rec-status').textContent = 'Duraklatıldı';
+        isPausedLocally = true;
+        document.getElementById('btn-pause').innerHTML = '▶ Devam Et';
+        break;
+      case 'resume':
+        document.getElementById('conn-dot').className = 'conn-dot recording';
+        document.getElementById('conn-status').textContent = 'Kayıt yapılıyor...';
+        document.getElementById('rec-dot').className = 'conn-dot recording';
+        document.getElementById('rec-status').textContent = 'Kayıt aktif';
+        isPausedLocally = false;
+        document.getElementById('btn-pause').innerHTML = '⏸ Duraklat';
+        break;
+      case 'transcript':
+        addTranscript(data.payload);
+        break;
+      case 'summary':
+        showSummary(data.payload);
+        break;
+      case 'end':
+        document.getElementById('conn-dot').className = 'conn-dot connected';
+        document.getElementById('conn-status').textContent = 'Kayıt tamamlandı';
+        document.getElementById('rec-dot').className = 'conn-dot connected';
+        document.getElementById('rec-status').textContent = 'Tamamlandı';
+        document.getElementById('btn-pause').disabled = true;
+        document.getElementById('btn-stop').disabled = true;
+        break;
+      case 'error':
+        showToast('HATA', data.payload, 'error');
+        document.getElementById('conn-dot').className = 'conn-dot';
+        document.getElementById('conn-status').textContent = 'Bağlantı kesildi';
+        document.getElementById('rec-dot').className = 'conn-dot';
+        document.getElementById('rec-status').textContent = 'Hata';
+        document.getElementById('btn-pause').disabled = true;
+        document.getElementById('btn-stop').disabled = true;
+        break;
+    }
+  }
+
+  function togglePause() {
+    if (!wsConnection || wsConnection.readyState !== 1) return;
+    if (isPausedLocally) {
+      wsConnection.send(JSON.stringify({ type: 'action', payload: 'resume' }));
+    } else {
+      wsConnection.send(JSON.stringify({ type: 'action', payload: 'pause' }));
+    }
+  }
+
+  function stopRecording() {
+    if (!wsConnection || wsConnection.readyState !== 1) return;
+    if (confirm('Kaydı durdurup özet oluşturmak istediğinize emin misiniz?')) {
+      wsConnection.send(JSON.stringify({ type: 'action', payload: 'stop' }));
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('rec-dot').className = 'conn-dot';
+      document.getElementById('rec-status').textContent = 'İşleniyor...';
+    }
+  }
+
+  // ── Transcript Feed ────────────────────
+  function addTranscript({ time, speakerLabel, speakerColor, text }) {
+    const emptyFeed = document.getElementById('empty-feed');
+    if (emptyFeed) emptyFeed.style.display = 'none';
+
+    const sId = parseInt((speakerLabel || 'S0').replace('S', '')) || 0;
+    const cssColor = SPEAKER_COLORS[sId % SPEAKER_COLORS.length];
+
+    // Update sidebar
+    if (!knownSpeakers.has(speakerLabel)) {
+      if (knownSpeakers.size === 0) {
+        document.getElementById('participants-list').innerHTML = '';
       }
+      knownSpeakers.add(speakerLabel);
+
+      const spDiv = document.createElement('div');
+      spDiv.className = 'speaker-tag';
+      spDiv.innerHTML = `<div class="speaker-dot" style="background: ${cssColor}; box-shadow: 0 0 6px ${cssColor}"></div> ${speakerLabel}`;
+      document.getElementById('participants-list').appendChild(spDiv);
+      document.getElementById('speaker-count').textContent = knownSpeakers.size;
     }
 
-    function togglePause() {
-      if (!wsConnection || wsConnection.readyState !== 1) return;
-      if (isPausedLocally) {
-        wsConnection.send(JSON.stringify({ type: 'action', payload: 'resume' }));
-      } else {
-        wsConnection.send(JSON.stringify({ type: 'action', payload: 'pause' }));
-      }
-    }
+    // Add transcript item
+    const box = document.getElementById('transcript-box');
+    const item = document.createElement('div');
+    item.className = 'transcript-item';
+    item.style.borderLeftColor = cssColor;
+    item.innerHTML = `
+      <div class="transcript-meta">
+        <span style="color: ${cssColor}; font-weight: 600">${speakerLabel}</span>
+        <span>${time}</span>
+      </div>
+      <div class="transcript-text">${escapeHtml(text)}</div>
+    `;
+    box.appendChild(item);
+    box.scrollTop = box.scrollHeight;
+  }
 
-    function stopRecording() {
-      if (!wsConnection || wsConnection.readyState !== 1) return;
-      if (confirm('Are you sure you want to stop recording and generate the summary?')) {
-        wsConnection.send(JSON.stringify({ type: 'action', payload: 'stop' }));
-        btnPause.disabled = true;
-        btnStop.disabled = true;
-        connDot.className = 'dot';
-        connStatus.textContent = 'Processing...';
-      }
-    }
+  // ── Template Modal ─────────────────────
+  async function openTemplateModal() {
+    const modal = document.getElementById('template-modal');
+    const grid = document.getElementById('templates-grid');
 
-    function addTranscript({ time, speakerLabel, speakerColor, text }) {
-      // Hex conversion for terminal colors (approximate)
-      const colorMap = {
-        cyan: '#22d3ee', green: '#4ade80', magenta: '#d946ef', 
-        yellow: '#facc15', blue: '#60a5fa', red: '#f87171',
-        white: '#ffffff'
-      };
-      
-      // Simple fallback color parsing (if ANSI code or chalk color names are passed)
-      // Since we modified record.js to send exact hex or names, we'll assume a hex color or css variable.
-      // But chalk gives us ANSI, so we'll just assign deterministic colors from CSS based on speaker label.
-      
-      const colors = ['#22d3ee', '#4ade80', '#d946ef', '#facc15', '#60a5fa', '#f87171', '#e879f9'];
-      const sId = parseInt(speakerLabel.replace('S', '')) || 0;
-      const cssColor = colors[sId % colors.length];
+    try {
+      const resp = await fetch('/api/templates');
+      const templates = await resp.json();
 
-      // Update Sidebar
-      if (!knownSpeakers.has(speakerLabel)) {
-        if (knownSpeakers.size === 0) participantsList.innerHTML = '';
-        knownSpeakers.add(speakerLabel);
-        
-        const spDiv = document.createElement('div');
-        spDiv.className = 'speaker-tag';
-        spDiv.innerHTML = `<div class="speaker-color" style="background: ${cssColor}; box-shadow: 0 0 8px ${cssColor}"></div> ${speakerLabel}`;
-        participantsList.appendChild(spDiv);
-        speakerCount.textContent = knownSpeakers.size;
-      }
-
-      // Add Transcript Item
-      const item = document.createElement('div');
-      item.className = 'transcript-item';
-      item.style.borderLeftColor = cssColor;
-      
-      item.innerHTML = `
-        <div class="transcript-meta">
-          <span style="color: ${cssColor}; font-weight: bold">${speakerLabel}</span>
-          <span>${time}</span>
+      grid.innerHTML = templates.map(t => `
+        <div class="template-card ${t.key === selectedTemplate ? 'selected' : ''}" data-key="${t.key}" onclick="selectTemplate('${t.key}')">
+          <div class="tpl-icon">${t.icon}</div>
+          <div class="tpl-name">${t.name}</div>
+          <div class="tpl-desc">${t.description}</div>
         </div>
-        <div class="transcript-text">${text}</div>
+      `).join('');
+    } catch {
+      grid.innerHTML = `
+        <div class="template-card selected" data-key="default" onclick="selectTemplate('default')">
+          <div class="tpl-icon">📋</div>
+          <div class="tpl-name">General Meeting</div>
+          <div class="tpl-desc">Genel toplantı özeti</div>
+        </div>
       `;
-      
-      transcriptBox.appendChild(item);
-      
-      // Auto scroll
-      transcriptBox.scrollTop = transcriptBox.scrollHeight;
     }
 
-    function showSummary(analysis) {
-      if (!analysis) return;
-      
-      let html = `<h3>Summary</h3><p>${analysis.summary || 'N/A'}</p>`;
-      
-      if (analysis.tone) {
-        html += `<h3>Tone</h3><p><span class="badge">${analysis.tone}</span></p>`;
-      }
-      
-      if (analysis.action_items && analysis.action_items.length > 0) {
-        html += `<h3>Action Items</h3><ul>`;
-        analysis.action_items.forEach(a => {
-          html += `<li>☐ ${a.item} <strong>${a.owner ? '→ ' + a.owner : ''}</strong></li>`;
+    modal.classList.add('active');
+  }
+
+  function closeTemplateModal() {
+    document.getElementById('template-modal').classList.remove('active');
+  }
+
+  function selectTemplate(key) {
+    selectedTemplate = key;
+    document.querySelectorAll('.template-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.key === key);
+    });
+  }
+
+  function startRecordingWithTemplate() {
+    closeTemplateModal();
+
+    // Reset recording state
+    knownSpeakers.clear();
+    document.getElementById('participants-list').innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">Ses bekleniyor...</div>';
+    document.getElementById('speaker-count').textContent = '0';
+    document.getElementById('transcript-box').innerHTML = '<div class="empty-feed" id="empty-feed"><div class="icon">🎙</div><h3>Kayda hazır</h3><p>Toplantı sesini dinliyor...</p></div>';
+    document.getElementById('btn-pause').disabled = true;
+    document.getElementById('btn-stop').disabled = true;
+    document.getElementById('btn-pause').innerHTML = '⏸ Duraklat';
+
+    // Navigate to recording page
+    navigate('recording');
+
+    // Send start command with template
+    if (wsConnection && wsConnection.readyState === 1) {
+      wsConnection.send(JSON.stringify({ type: 'action', payload: 'start', template: selectedTemplate }));
+      document.getElementById('rec-dot').className = 'conn-dot';
+      document.getElementById('rec-status').textContent = 'Başlatılıyor...';
+    }
+  }
+
+  // ── Summary ────────────────────────────
+  function showSummary(analysis) {
+    if (!analysis) return;
+
+    let html = `<h3>📌 Özet</h3><p>${analysis.summary || 'N/A'}</p>`;
+
+    if (analysis.tone) {
+      const toneEmoji = { positive: '😊', tense: '😬', neutral: '😐' };
+      html += `<h3>🎭 Ton</h3><p><span class="badge">${toneEmoji[analysis.tone] || ''} ${analysis.tone}</span></p>`;
+    }
+
+    if (analysis.action_items?.length > 0) {
+      html += `<h3>✅ Aksiyon Kalemleri</h3><ul>`;
+      analysis.action_items.forEach(a => {
+        html += `<li>☐ ${a.item} ${a.owner ? '<strong>→ ' + a.owner + '</strong>' : ''}</li>`;
+      });
+      html += `</ul>`;
+    }
+
+    const lists = ['key_topics','topics_discussed','went_well','went_wrong','improvements','decisions','agenda_items','feedback','growth_areas'];
+    const listTitles = {
+      key_topics: '🗂 Konular', topics_discussed: '🗂 Tartışılan Konular',
+      went_well: '😊 İyi Giden', went_wrong: '😟 Kötü Giden',
+      improvements: '💡 İyileştirmeler', decisions: '⚖️ Kararlar',
+      agenda_items: '📋 Gündem', feedback: '💬 Geri Bildirim',
+      growth_areas: '📈 Gelişim Alanları'
+    };
+
+    lists.forEach(key => {
+      if (analysis[key]?.length > 0) {
+        html += `<h3>${listTitles[key] || key}</h3><ul>`;
+        analysis[key].forEach(i => {
+          const text = typeof i === 'string' ? i : i.decision || i.text || JSON.stringify(i);
+          html += `<li>${text}</li>`;
         });
         html += `</ul>`;
       }
-      
-      // For any other arrays
-      const lists = ['key_topics', 'topics_discussed', 'went_well', 'went_wrong', 'improvements', 'decisions', 'agenda_items', 'feedback', 'growth_areas'];
-      lists.forEach(key => {
-        if (analysis[key] && analysis[key].length > 0) {
-          const title = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          html += `<h3>${title}</h3><ul>`;
-          analysis[key].forEach(i => {
-           const text = typeof i === 'string' ? i : i.decision || i.text;
-           html += `<li>${text}</li>`;
-          });
-          html += `</ul>`;
-        }
-      });
-      
-      summaryBody.innerHTML = html;
-      summaryModal.classList.add('active');
+    });
+
+    document.getElementById('summary-body').innerHTML = html;
+    document.getElementById('summary-modal').classList.add('active');
+  }
+
+  function closeSummary() {
+    document.getElementById('summary-modal').classList.remove('active');
+  }
+
+  // ── Load Home ──────────────────────────
+  async function loadHome() {
+    try {
+      const resp = await fetch('/api/meetings');
+      const meetings = await resp.json();
+
+      // Stats
+      const statsEl = document.getElementById('home-stats');
+      statsEl.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${meetings.length}</div>
+          <div class="stat-label">Toplam Toplantı</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${meetings.filter(m => m.tone === 'positive').length}</div>
+          <div class="stat-label">Pozitif Toplantı</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${(meetings.reduce((s,m) => s + m.size, 0) / 1024).toFixed(1)} KB</div>
+          <div class="stat-label">Toplam Veri</div>
+        </div>
+      `;
+
+      // Recent meetings
+      const recentEl = document.getElementById('recent-meetings');
+      if (meetings.length === 0) {
+        recentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <h3>Henüz toplantı kaydedilmemiş</h3>
+            <p>Yeni bir kayıt başlatarak ilk toplantınızı oluşturun.</p>
+          </div>`;
+        return;
+      }
+
+      const recent = meetings.slice(0, 5);
+      recentEl.innerHTML = recent.map(m => renderMeetingCard(m)).join('');
+    } catch (err) {
+      console.error('Failed to load home:', err);
+    }
+  }
+
+  // ── Load Meetings ──────────────────────
+  async function loadMeetings() {
+    try {
+      const resp = await fetch('/api/meetings');
+      const meetings = await resp.json();
+      const el = document.getElementById('meetings-list');
+
+      if (meetings.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <h3>Toplantı bulunamadı</h3>
+            <p>Henüz kaydedilmiş bir toplantı yok.</p>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = meetings.map(m => renderMeetingCard(m)).join('');
+    } catch (err) {
+      console.error('Failed to load meetings:', err);
+    }
+  }
+
+  function renderMeetingCard(m) {
+    const toneClass = m.tone === 'positive' ? 'badge-positive' : m.tone === 'tense' ? 'badge-tense' : 'badge-neutral';
+    const toneEmoji = m.tone === 'positive' ? '😊' : m.tone === 'tense' ? '😬' : '😐';
+    return `
+      <div class="card meeting-card" onclick="navigate('detail', '${m.id}')">
+        <div>
+          <div class="meeting-date">📅 ${m.date}</div>
+          <div class="meeting-title">${m.id.replace('meeting_', '').replace(/T/g, ' ').replace(/-/g, ':').slice(0, 16)}</div>
+          <div class="meeting-summary">${m.summary || 'Özet mevcut değil'}</div>
+        </div>
+        <div class="meeting-meta">
+          <span class="badge">${m.duration}</span>
+          <span class="badge ${toneClass}">${toneEmoji} ${m.tone}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Load Meeting Detail ────────────────
+  async function loadMeetingDetail(id) {
+    try {
+      const resp = await fetch(`/api/meetings/${id}`);
+      if (!resp.ok) throw new Error('Not found');
+      const data = await resp.json();
+
+      document.getElementById('detail-title').textContent = id.replace('meeting_', '').replace(/T/g, ' ');
+      document.getElementById('detail-content').innerHTML = markdownToHtml(data.content);
+    } catch (err) {
+      document.getElementById('detail-content').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">❌</div>
+          <h3>Toplantı bulunamadı</h3>
+        </div>`;
+    }
+  }
+
+  // ── Search ─────────────────────────────
+  async function doSearch() {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+
+    const el = document.getElementById('search-results');
+    el.innerHTML = '<div style="text-align:center; color: var(--text-muted); padding: 2rem;">Aranıyor...</div>';
+
+    try {
+      const resp = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const results = await resp.json();
+
+      if (results.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <h3>"${escapeHtml(query)}" için sonuç bulunamadı</h3>
+          </div>`;
+        return;
+      }
+
+      el.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">${results.length} toplantıda ${results.reduce((s,r) => s + r.matchCount, 0)} eşleşme bulundu</div>`;
+      el.innerHTML += results.map(r => `
+        <div class="search-result" onclick="navigate('detail', '${r.id}')">
+          <div class="result-file">📄 ${r.filename}</div>
+          <div class="result-date">${r.date || ''} · ${r.matchCount} eşleşme</div>
+          ${r.matches.map(m => `<div class="result-match">${highlightText(escapeHtml(m.text), query)}</div>`).join('')}
+        </div>
+      `).join('');
+    } catch (err) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Arama hatası</h3><p>${err.message}</p></div>`;
+    }
+  }
+
+  // ── Utilities ──────────────────────────
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function highlightText(html, query) {
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return html.replace(re, '<mark>$1</mark>');
+  }
+
+  function markdownToHtml(md) {
+    return md
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.+?):\*\*\s*(.+)/gm, '<p><strong>$1:</strong> $2</p>')
+      .replace(/\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
+      .replace(/^---$/gm, '<hr>')
+      .replace(/^- \[ \] (.+)$/gm, '<li>☐ $1</li>')
+      .replace(/^- \[x\] (.+)$/gm, '<li>☑ $1</li>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/\n{2,}/g, '\n')
+      .replace(/^(?!<[hpuol]|<hr|<li|<strong)(.+)$/gm, '<p>$1</p>');
+  }
+
+  // ── Toast Notifications ──────────────────
+  function showToast(title, message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
+      document.body.appendChild(container);
     }
 
-    function closeSummary() {
-      summaryModal.classList.remove('active');
-    }
+    const toast = document.createElement('div');
+    const color = type === 'error' ? 'var(--danger)' : 'var(--accent-light)';
+    toast.style.cssText = `background: var(--bg-surface); border-left: 4px solid ${color}; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: var(--shadow-lg); color: var(--text); font-size: 0.9rem; max-width: 400px; animation: slideInRight 0.3s ease-out;`;
+    toast.innerHTML = `<strong style="color:${color}">${title}</strong><div style="color:var(--text-secondary); margin-top:0.3rem">${escapeHtml(message)}</div>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 8000);
+  }
 
-    // Start
-    connect();
-  </script>
+  // ── Init ───────────────────────────────
+  connect();
+  loadHome();
+</script>
 </body>
 </html>

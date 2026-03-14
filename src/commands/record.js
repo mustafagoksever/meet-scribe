@@ -24,10 +24,20 @@ const SPEAKER_COLORS = [
   chalk.magentaBright.bold,
 ];
 
+const SPEAKER_COLOR_NAMES = [
+  'cyan', 'green', 'magenta', 'yellow', 'blue', 'red', 'white', 'greenBright', 'cyanBright', 'magentaBright'
+];
+
+/**
+ * Get speaker info by index
+ * Uses energy-based heuristic: significant silence gaps suggest speaker change
+ */
 function getSpeaker(index) {
+  const colorIdx = index % SPEAKER_COLORS.length;
   return {
-    label: `Speaker`,
-    color: SPEAKER_COLORS[0],
+    label: `S${index}`,
+    color: SPEAKER_COLORS[colorIdx],
+    colorName: SPEAKER_COLOR_NAMES[colorIdx],
   };
 }
 
@@ -50,7 +60,28 @@ export async function handleRecord(opts) {
   console.log(chalk.dim(`  Stop: Ctrl+C | Pause: Space\n`));
 
   if (config.web) {
-    startWebServer(config.webPort);
+    startWebServer(config.webPort, config);
+
+    // Wait for web client to send start with template selection
+    console.log(chalk.cyan('⏳ Waiting for start command from Web Dashboard...'));
+    console.log(chalk.dim('   Open the dashboard and select a meeting template to begin.\n'));
+
+    const startData = await new Promise((resolve) => {
+      // Also allow Ctrl+C to exit while waiting
+      const handleExit = () => process.exit(0);
+      process.on('SIGINT', handleExit);
+
+      webEvents.once('start', (data) => {
+        process.removeListener('SIGINT', handleExit);
+        resolve(data);
+      });
+    });
+
+    // Apply template from web selection
+    if (startData.template) {
+      config.template = startData.template;
+      console.log(chalk.green(`✓ Template selected: ${config.template}`));
+    }
   }
 
   const recorder = new AudioRecorder(config, audioArgs, chunkDuration, startTime);
@@ -75,6 +106,12 @@ class AudioRecorder {
     this.currentBuffer = Buffer.alloc(0);
     this.headerSkipped = false;
     this.headerBuffer = Buffer.alloc(0);
+
+    // Speaker tracking
+    this.currentSpeaker = 0;
+    this.lastRMS = 0;
+    this.silenceCount = 0;
+    this.speakerChangeThreshold = 3; // consecutive silence chunks before considering speaker change
   }
 
   start() {
@@ -121,11 +158,6 @@ class AudioRecorder {
 
   _onAudioData(data) {
     if (this.isPaused) return; // Skip buffering when paused
-    
-    // We used to try to strip the first 44 bytes of WAV header here
-    // but Windows DShow pipelines can chunk data awkwardly causing deadlocks.
-    // Instead we just capture everything. The trailing `addWavHeader`
-    // will just inject a second header which Whisper handles perfectly fine.
     this.currentBuffer = Buffer.concat([this.currentBuffer, data]);
   }
 
@@ -170,6 +202,31 @@ class AudioRecorder {
     }, this.chunkDuration * 1000);
   }
 
+  // ── Speaker detection (energy-based heuristic) ───────
+
+  _detectSpeakerChange(rms) {
+    // If there was a significant silence gap, consider it a speaker change
+    if (this.lastRMS < 0.001 && rms > 0.005) {
+      this.silenceCount++;
+      if (this.silenceCount >= this.speakerChangeThreshold) {
+        this.currentSpeaker++;
+        this.silenceCount = 0;
+      }
+    }
+
+    // If energy profile changes dramatically, possible speaker change
+    if (this.lastRMS > 0 && rms > 0) {
+      const ratio = rms / this.lastRMS;
+      if (ratio > 3.0 || ratio < 0.3) {
+        // Significant energy change — potential speaker change
+        this.currentSpeaker++;
+      }
+    }
+
+    this.lastRMS = rms;
+    return this.currentSpeaker;
+  }
+
   // ── Chunk processing ───────────────────
 
   async _processChunk(rawBuffer) {
@@ -179,6 +236,8 @@ class AudioRecorder {
 
     if (rms < 0.0005) {
       console.log(chalk.dim(`  [${time}] (silence — skipping)`));
+      this.silenceCount++;
+      this.lastRMS = rms;
       return;
     }
 
@@ -198,7 +257,9 @@ class AudioRecorder {
 
       spinner.stop();
 
-      const speaker = getSpeaker(this.chunkIndex);
+      // Detect speaker based on audio energy changes
+      const speakerIdx = this._detectSpeakerChange(rms);
+      const speaker = getSpeaker(speakerIdx);
       const line = `[${time}] [${speaker.label}]: ${text}`;
       this.transcriptLines.push(line);
 
@@ -212,11 +273,19 @@ class AudioRecorder {
         broadcastMessage('transcript', {
           time,
           speakerLabel: speaker.label,
+          speakerColor: speaker.colorName,
           text,
         });
       }
     } catch (err) {
       spinner.fail(`STT error: ${err.message}`);
+      if (err.message.includes('401') || err.message.includes('403') || err.message.includes('invalid_api_key')) {
+        console.error(chalk.red('\n✖ Invalid API Key! Stopping recording.'));
+        if (this.config.web) {
+          broadcastMessage('error', 'API Anahtarı Geçersiz (401 Unauthorized). Lütfen .meetscriberc dosyanızdaki apiKey değerini kontrol edin.');
+        }
+        this._cleanup();
+      }
     }
   }
 

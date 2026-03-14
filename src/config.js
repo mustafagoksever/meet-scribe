@@ -59,6 +59,12 @@ export function resolveConfig(opts) {
     webPort:     parseInt(opts.webPort, 10) || fileConfig.webPort   || DEFAULTS.webPort,
   };
 
+  // Warning for API key override confusion
+  if (fileConfig.apiKey && config.apiKey !== fileConfig.apiKey && !opts.apiKey) {
+    console.warn(chalk.yellow(`\n⚠ Config warning: Using API key from environment variable (OPENAI_API_KEY).`));
+    console.warn(chalk.dim(`  This is overriding the key in ${CONFIG_FILENAME}. To use the file's key, unset the environment variable.\n`));
+  }
+
   if (!config.apiKey) {
     console.error(chalk.red('\n✖ API key not found!\n'));
     console.error(chalk.yellow('Use one of the following methods:'));
