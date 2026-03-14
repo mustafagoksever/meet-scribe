@@ -5,12 +5,13 @@
 export const TEMPLATES = {
   default: {
     name: 'General Meeting',
-    systemPrompt: `You are an assistant that analyzes meeting transcripts.
-Analyze the given transcript and respond in the following JSON format.
-Return only JSON, nothing else.
+    description: 'Genel toplantı özeti, konular ve aksiyon kalemleri',
+    systemPrompt: `You are a professional secretary. Analyze the meeting transcript and respond in the following JSON format.
+Return only JSON.
 
 {
-  "summary": "2-3 sentence summary of the meeting",
+  "meeting_title": "Short descriptive title (e.g., Q1 Marketing Planning)",
+  "summary": "Meeting summary (2-3 sentences)",
   "key_topics": ["topic1", "topic2"],
   "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
   "decisions": ["decision1", "decision2"],
@@ -19,84 +20,64 @@ Return only JSON, nothing else.
 }
 
 Rules:
-- Extract speaker names from the transcript
-- If the responsible person for an action item is unknown, leave "owner" empty
-- Estimate duration from transcript length (minutes ~ words/150)
-- Tone can be: positive, neutral, or tense`,
+- Be concise and objective
+- Identify speakers if possible`,
   },
 
   standup: {
     name: 'Daily Standup',
-    systemPrompt: `You are an assistant that analyzes daily standup meeting notes.
+    description: 'Dün/Bugün/Engel takibi',
+    systemPrompt: `You are an assistant that analyzes daily standups.
 Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
 
 {
-  "summary": "Standup summary (1-2 sentences)",
+  "meeting_title": "Short descriptive title (e.g., Frontend Team Standup - March 15)",
+  "summary": "Brief standup summary",
   "participants": [
-    {
-      "name": "Person name or S0/S1/S2",
-      "yesterday": "What they did yesterday",
-      "today": "What they plan to do today",
-      "blockers": "Blockers or empty"
-    }
+    { "name": "Name", "yesterday": "Done", "today": "Doing", "blockers": "None/Text" }
   ],
-  "action_items": [{"item": "task", "owner": "person or empty"}],
-  "tone": "positive | neutral | tense",
+  "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
   "estimated_duration_min": 0
-}
-
-Rules:
-- Extract yesterday/today/blockers for each participant
-- Keep the summary concise`,
+}`,
   },
 
   retro: {
     name: 'Retrospective',
-    systemPrompt: `You are an assistant that analyzes retrospective meeting notes.
+    description: 'İyi/Kötü/Gelişim takibi',
+    systemPrompt: `You are an assistant that analyzes retrospective meetings.
 Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
 
 {
-  "summary": "Retro summary (1-2 sentences)",
-  "went_well": ["item1", "item2"],
-  "went_wrong": ["item1", "item2"],
-  "improvements": ["suggestion1", "suggestion2"],
-  "action_items": [{"item": "task", "owner": "person or empty"}],
-  "tone": "positive | neutral | tense",
+  "meeting_title": "Short descriptive title (e.g., Sprint 12 Retrospective)",
+  "summary": "Retro summary",
+  "went_well": ["item1"],
+  "went_wrong": ["item1"],
+  "improvements": ["item1"],
+  "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
   "estimated_duration_min": 0
-}
-
-Rules:
-- Clearly separate "Went Well", "Went Wrong", and "Improvements"
-- Make action items concrete and measurable`,
+}`,
   },
 
   decision: {
     name: 'Decision Meeting',
-    systemPrompt: `You are an assistant that analyzes decision meeting notes.
+    description: 'Alınan kararlar ve nedenleri',
+    systemPrompt: `You are an assistant that analyzes high-stakes decision meetings.
 Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
 
 {
-  "summary": "Meeting summary (2-3 sentences)",
-  "agenda_items": ["item1", "item2"],
+  "meeting_title": "Short descriptive title (e.g., New Tech Stack Decision)",
+  "summary": "Decision summary",
+  "agenda_items": ["item1"],
   "decisions": [
-    {
-      "decision": "The decision made",
-      "rationale": "Why this decision was made",
-      "owner": "Who will implement it"
-    }
+    { "decision": "Text", "rationale": "Text", "owner": "Name" }
   ],
-  "deferred_items": ["topic1"],
-  "action_items": [{"item": "task", "owner": "person or empty"}],
-  "tone": "positive | neutral | tense",
+  "deferred_items": ["item1"],
+  "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
   "estimated_duration_min": 0
-}
-
-Rules:
-- Always include rationale for decisions
-- List deferred items separately`,
+}`,
   },
 
   oneone: {
@@ -107,6 +88,7 @@ Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
 
 {
+  "meeting_title": "Short descriptive title (e.g., Mustafa & Manager 1:1)",
   "summary": "Meeting summary (2-3 sentences)",
   "topics_discussed": ["topic1", "topic2"],
   "feedback": ["feedback1"],

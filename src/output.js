@@ -66,7 +66,8 @@ export function generateMarkdown(transcriptLines, analysis, startTime, lang = 't
     return texts[lang]?.[key] || texts.tr[key] || key;
   };
 
-  let md = `# ${t('title')}\n\n`;
+  let md = `# ${analysis?.meeting_title || t('title')}\n\n`;
+  md += `**${t('title')}:** ${analysis?.meeting_title || t('title')}\n`;
   md += `**${t('date')}:** ${dateStr}\n`;
   md += `**${t('duration')}:** ~${durMin} min\n`;
   md += `**${t('tone')}:** ${tone}\n\n`;

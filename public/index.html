@@ -428,6 +428,50 @@
     }
 
     .detail-content h1 { font-size: 1.5rem; color: var(--accent-light); margin-bottom: 0.5rem; }
+    .md-content li { margin-bottom: 0.5rem; }
+
+    /* Editable Title Styles */
+    .editable-title-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+    }
+    .title-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.8rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+    }
+    .light-mode .title-input {
+      background: white;
+    }
+    .title-edit-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.2s;
+      font-size: 1.2rem;
+    }
+    .title-edit-btn:hover {
+      opacity: 1;
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+    .title-edit-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-sm {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+    }
     .detail-content h2 { font-size: 1.2rem; color: var(--text); margin-top: 1.5rem; margin-bottom: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
     .detail-content h3 { font-size: 1rem; color: var(--text-secondary); margin-top: 1rem; }
     .detail-content p { color: var(--text-secondary); margin-bottom: 0.5rem; }
@@ -1427,7 +1471,7 @@
       <div class="card meeting-card" onclick="navigate('detail', '${m.id}')">
         <div>
           <div class="meeting-date">📅 ${m.date}</div>
-          <div class="meeting-title">${m.id.replace('meeting_', '').replace(/T/g, ' ').replace(/-/g, ':').slice(0, 16)}</div>
+          <div class="meeting-title">${m.title || m.id.replace('meeting_', '').replace(/T/g, ' ').replace(/-/g, ':').slice(0, 16)}</div>
           <div class="meeting-summary">${summaryText}</div>
         </div>
         <div class="meeting-meta">
@@ -1446,7 +1490,7 @@
       const data = await resp.json();
 
       document.getElementById('detail-back-btn').textContent = t('detail_back');
-      document.getElementById('detail-title').textContent = id.replace('meeting_', '').replace(/T/g, ' ');
+      document.getElementById('detail-title').textContent = data.title || id.replace('meeting_', '').replace(/T/g, ' ');
       document.getElementById('detail-content').innerHTML = markdownToHtml(data.content);
     } catch (err) {
       document.getElementById('detail-content').innerHTML = `

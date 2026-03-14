@@ -51,6 +51,8 @@ export function startWebServer(port, config) {
         const stat = fs.statSync(filePath);
         const content = fs.readFileSync(filePath, 'utf-8');
 
+        // Extract metadata - support both languages
+        const titleMatch = content.match(/\*\*(Title|Toplantı Notları):\*\*\s*(.+)/);
         const dateMatch = content.match(/\*\*(Date|Tarih):\*\*\s*(.+)/);
         const durMatch = content.match(/\*\*(Duration|Süre):\*\*\s*(.+)/);
         const toneMatch = content.match(/\*\*(Tone|Ton):\*\*\s*(.+)/);
@@ -59,6 +61,7 @@ export function startWebServer(port, config) {
         return {
           id: file.replace('.md', ''),
           filename: file,
+          title: titleMatch ? titleMatch[2].trim() : file.replace('.md', ''),
           date: dateMatch ? dateMatch[2].trim() : stat.mtime.toISOString(),
           duration: durMatch ? durMatch[2].trim() : '?',
           tone: toneMatch ? toneMatch[2].trim() : 'neutral',
@@ -68,6 +71,42 @@ export function startWebServer(port, config) {
       });
 
       res.json(meetings);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * PATCH /api/meetings/:id — Rename (update title) a meeting
+   */
+  app.patch('/api/meetings/:id', (req, res) => {
+    try {
+      const { title } = req.body;
+      if (!title) return res.status(400).json({ error: 'Title is required' });
+
+      const filename = req.params.id.endsWith('.md') ? req.params.id : `${req.params.id}.md`;
+      const filePath = path.join(outputDir, filename);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+
+      let content = fs.readFileSync(filePath, 'utf-8');
+      
+      // Update the # Title header (first line) and any **Title:** or **Toplantı Notları:** tags
+      content = content.replace(/^# .+$/m, `# ${title}`);
+      
+      // Update metadata tags
+      const hasTitleTag = content.match(/\*\*(Title|Toplantı Notları):\*\*\s*.+/);
+      if (hasTitleTag) {
+        content = content.replace(/\*\*(Title|Toplantı Notları):\*\*\s*.+/, `**$1:** ${title}`);
+      } else {
+        // If no title tag exists, insert it before the Date tag
+        content = content.replace(/\*\*(Date|Tarih):\*\*\s*.+/, `**Title:** ${title}\n$&`);
+      }
+
+      fs.writeFileSync(filePath, content, 'utf-8');
+      res.json({ success: true, title });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -86,7 +125,12 @@ export function startWebServer(port, config) {
       }
 
       const content = fs.readFileSync(filePath, 'utf-8');
-      res.json({ id: req.params.id, filename, content });
+      
+      // Extract title for the detail view
+      const titleMatch = content.match(/\*\*(Title|Toplantı Notları):\*\*\s*(.+)/);
+      const title = titleMatch ? titleMatch[2].trim() : req.params.id;
+
+      res.json({ id: req.params.id, filename, title, content });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
