@@ -101,7 +101,7 @@ Rules:
 
   oneone: {
     name: '1:1 Meeting',
-    description: 'Birebir görüşme özeti',
+    description: 'Birebir görüşme ve geri bildirim',
     systemPrompt: `You are an assistant that analyzes 1:1 meeting notes.
 Analyze the given transcript and respond in the following JSON format.
 Return only JSON.
@@ -111,7 +111,7 @@ Return only JSON.
   "topics_discussed": ["topic1", "topic2"],
   "feedback": ["feedback1"],
   "growth_areas": ["area1"],
-  "action_items": [{"item": "task", "owner": "person or empty"}],
+  "action_items": [{"item": "task description", "owner": "responsible person or empty"}],
   "next_meeting_topics": ["topic1"],
   "tone": "positive | neutral | tense",
   "estimated_duration_min": 0
@@ -121,6 +121,41 @@ Rules:
 - Summarize feedback constructively
 - Clearly identify growth areas`,
   },
+};
+
+const LOCALIZATIONS = {
+  tr: {
+    names: {
+      default: 'Genel Toplantı',
+      standup: 'Günlük Standup',
+      retro: 'Retrospektif',
+      decision: 'Karar Toplantısı',
+      oneone: '1:1 Görüşme'
+    },
+    descriptions: {
+      default: 'Genel toplantı özeti, konular ve aksiyon kalemleri',
+      standup: 'Dün/Bugün/Engel takibi',
+      retro: 'İyi/Kötü/Gelişim takibi',
+      decision: 'Alınan kararlar ve nedenleri',
+      oneone: 'Birebir görüşme ve geri bildirim'
+    }
+  },
+  en: {
+    names: {
+      default: 'General Meeting',
+      standup: 'Daily Standup',
+      retro: 'Retrospective',
+      decision: 'Decision Meeting',
+      oneone: '1:1 Meeting'
+    },
+    descriptions: {
+      default: 'General meeting summary, topics and action items',
+      standup: 'Daily standup: yesterday, today, blockers',
+      retro: 'Retrospective: went well, went wrong, improvements',
+      decision: 'Decision meeting: agenda, decisions, rationale',
+      oneone: '1:1 meeting feedback and growth areas'
+    }
+  }
 };
 
 /**
@@ -139,17 +174,9 @@ export function getTemplate(templateName, lang = 'tr') {
   const langText = lang === 'en' ? 'ENGLISH' : 'TURKISH (Türkçe)';
   template.systemPrompt += `\n\nCRITICAL: All generated content (summary, items, topics) MUST be in ${langText}. Do not use any other language for the values in the JSON.`;
 
-  // Localize name
-  if (lang === 'tr') {
-    const names = {
-      'General Meeting': 'Genel Toplantı',
-      'Daily Standup': 'Günlük Standup',
-      'Retrospective': 'Retrospektif',
-      'Decision Meeting': 'Karar Toplantısı',
-      '1:1 Meeting': '1:1 Görüşme'
-    };
-    template.name = names[template.name] || template.name;
-  }
+  // Localize name for the return object
+  const loc = LOCALIZATIONS[lang] || LOCALIZATIONS.tr;
+  template.name = loc.names[templateName] || template.name;
 
   return template;
 }
@@ -158,42 +185,13 @@ export function getTemplate(templateName, lang = 'tr') {
  * List available templates
  */
 export function listTemplates(lang = 'tr') {
+  const loc = LOCALIZATIONS[lang] || LOCALIZATIONS.tr;
+  
   return Object.entries(TEMPLATES).map(([key, val]) => {
-    let name = val.name;
-    let desc = val.description || '';
-
-    if (lang === 'tr') {
-      const trNames = {
-        'General Meeting': 'Genel Toplantı',
-        'Daily Standup': 'Günlük Standup',
-        'Retrospective': 'Retrospektif',
-        'Decision Meeting': 'Karar Toplantısı',
-        '1:1 Meeting': '1:1 Görüşme'
-      };
-      const trDescs = {
-        'General Meeting': 'Genel toplantı özeti',
-        'Daily Standup': 'Dün/Bugün/Engel takibi',
-        'Retrospective': 'İyi/Kötü/Gelişim takibi',
-        'Decision Meeting': 'Alınan kararlar ve nedenleri',
-        '1:1 Meeting': 'Birebir görüşme ve geri bildirim'
-      };
-      name = trNames[name] || name;
-      desc = trDescs[val.name] || desc;
-    } else {
-      const enDescs = {
-        'General Meeting': 'General meeting summary',
-        'Daily Standup': 'Daily standup tracking',
-        'Retrospective': 'What went well/wrong',
-        'Decision Meeting': 'Key decisions and rationale',
-        '1:1 Meeting': 'Performance and feedback'
-      };
-      desc = enDescs[val.name] || desc || val.name;
-    }
-
     return {
       key,
-      name,
-      description: desc,
+      name: loc.names[key] || val.name,
+      description: loc.descriptions[key] || val.description || '',
       icon: getIcon(key)
     };
   });

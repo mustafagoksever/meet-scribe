@@ -51,18 +51,18 @@ export function startWebServer(port, config) {
         const stat = fs.statSync(filePath);
         const content = fs.readFileSync(filePath, 'utf-8');
 
-        const dateMatch = content.match(/\*\*Date:\*\*\s*(.+)/);
-        const durMatch = content.match(/\*\*Duration:\*\*\s*(.+)/);
-        const toneMatch = content.match(/\*\*Tone:\*\*\s*(.+)/);
-        const summaryMatch = content.match(/## 📌 Summary\s*\n\s*\n(.+)/);
+        const dateMatch = content.match(/\*\*(Date|Tarih):\*\*\s*(.+)/);
+        const durMatch = content.match(/\*\*(Duration|Süre):\*\*\s*(.+)/);
+        const toneMatch = content.match(/\*\*(Tone|Ton):\*\*\s*(.+)/);
+        const summaryMatch = content.match(/## 📌 (Summary|Özet)\s*\n\s*\n(.+)/);
 
         return {
           id: file.replace('.md', ''),
           filename: file,
-          date: dateMatch ? dateMatch[1].trim() : stat.mtime.toISOString(),
-          duration: durMatch ? durMatch[1].trim() : '?',
-          tone: toneMatch ? toneMatch[1].trim() : 'neutral',
-          summary: summaryMatch ? summaryMatch[1].trim().slice(0, 200) : '',
+          date: dateMatch ? dateMatch[2].trim() : stat.mtime.toISOString(),
+          duration: durMatch ? durMatch[2].trim() : '?',
+          tone: toneMatch ? toneMatch[2].trim() : 'neutral',
+          summary: summaryMatch ? summaryMatch[2].trim().slice(0, 200) : '',
           size: stat.size,
         };
       });
@@ -126,7 +126,7 @@ export function startWebServer(port, config) {
             }
           }
 
-          const dateMatch = content.match(/\*\*Date:\*\*\s*(.+)/);
+          const dateMatch = content.match(/\*\*(Date|Tarih):\*\*\s*(.+)/);
 
           results.push({
             id: file.replace('.md', ''),

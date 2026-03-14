@@ -376,7 +376,7 @@ class AudioRecorder {
       }
     }
 
-    const markdown = generateMarkdown(transcriptLines, analysis, startTime);
+    const markdown = generateMarkdown(transcriptLines, analysis, startTime, config.lang || 'tr');
     const savedPath = saveMarkdown(markdown, config.output);
 
     const icon = analysis ? '✓' : '⚠';

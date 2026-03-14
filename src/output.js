@@ -4,23 +4,73 @@ import path from 'path';
 /**
  * Generate meeting Markdown file
  */
-export function generateMarkdown(transcriptLines, analysis, startTime) {
+export function generateMarkdown(transcriptLines, analysis, startTime, lang = 'tr') {
   const now = startTime || new Date();
   const dateStr = formatDate(now);
   const durMin = analysis?.estimated_duration_min || '?';
   const tone = analysis?.tone || 'neutral';
 
-  let md = `# Meeting Transcript
+  const t = (key) => {
+    const texts = {
+      tr: {
+        title: 'Toplantı Notları',
+        date: 'Tarih',
+        duration: 'Süre',
+        tone: 'Ton',
+        transcript: '📝 Transkript',
+        summary: '📌 Özet',
+        topics: '🗂 Konular',
+        participants: '👥 Katılımcılar',
+        yesterday: 'Dün',
+        today: 'Bugün',
+        blockers: 'Engeller',
+        well: '😊 İyi Giden',
+        wrong: '😟 Kötü Giden',
+        improvements: '💡 İyileştirmeler',
+        agenda: '📋 Gündem Maddeleri',
+        decisions: '⚖️ Kararlar',
+        rationale: 'Gerekçe',
+        owner: 'Sorumlu',
+        deferred: '⏳ Ertelenenler',
+        actions: '✅ Aksiyon Kalemleri',
+        feedback: '💬 Geri Bildirim',
+        growth: '📈 Gelişim Alanları',
+        next: '📅 Gelecek Toplantı Konuları'
+      },
+      en: {
+        title: 'Meeting Transcript',
+        date: 'Date',
+        duration: 'Duration',
+        tone: 'Tone',
+        transcript: '📝 Transcript',
+        summary: '📌 Summary',
+        topics: '🗂 Key Topics',
+        participants: '👥 Participants',
+        yesterday: 'Yesterday',
+        today: 'Today',
+        blockers: 'Blockers',
+        well: '😊 Went Well',
+        wrong: '😟 Went Wrong',
+        improvements: '💡 Improvements',
+        agenda: '📋 Agenda Items',
+        decisions: '⚖️ Decisions',
+        rationale: 'Rationale',
+        owner: 'Owner',
+        deferred: '⏳ Deferred Items',
+        actions: '✅ Action Items',
+        feedback: '💬 Feedback',
+        growth: '📈 Growth Areas',
+        next: '📅 Next Meeting Topics'
+      }
+    };
+    return texts[lang]?.[key] || texts.tr[key] || key;
+  };
 
-**Date:** ${dateStr}
-**Duration:** ~${durMin} min
-**Tone:** ${tone}
-
----
-
-## 📝 Transcript
-
-`;
+  let md = `# ${t('title')}\n\n`;
+  md += `**${t('date')}:** ${dateStr}\n`;
+  md += `**${t('duration')}:** ~${durMin} min\n`;
+  md += `**${t('tone')}:** ${tone}\n\n`;
+  md += `---\n\n## ${t('transcript')}\n\n`;
 
   // Transcript lines
   if (Array.isArray(transcriptLines)) {
@@ -33,7 +83,7 @@ export function generateMarkdown(transcriptLines, analysis, startTime) {
 
   // Analysis sections
   if (analysis) {
-    md += renderAnalysis(analysis);
+    md += renderAnalysis(analysis, t);
   }
 
   md += '\n';
@@ -44,64 +94,65 @@ export function generateMarkdown(transcriptLines, analysis, startTime) {
  * Render analysis into Markdown sections
  * Supports all field types from different templates.
  */
-function renderAnalysis(analysis) {
+function renderAnalysis(analysis, t) {
   let md = '';
 
   // Summary (present in all templates)
-  md += renderSection('📌 Summary', analysis.summary);
+  md += renderSection(t('summary'), analysis.summary);
 
   // Key topics / topics discussed
-  md += renderList('🗂 Key Topics', analysis.key_topics || analysis.topics_discussed);
+  md += renderList(t('topics'), analysis.key_topics || analysis.topics_discussed);
 
   // Standup: Participants
   if (analysis.participants?.length > 0) {
-    md += '\n---\n\n## 👥 Participants\n\n';
+    md += `\n---\n\n## ${t('participants')}\n\n`;
     for (const p of analysis.participants) {
       md += `### ${p.name}\n`;
-      md += `- **Yesterday:** ${p.yesterday || '—'}\n`;
-      md += `- **Today:** ${p.today || '—'}\n`;
-      if (p.blockers) md += `- **Blockers:** ${p.blockers}\n`;
+      md += `- **${t('yesterday')}:** ${p.yesterday || '—'}\n`;
+      md += `- **${t('today')}:** ${p.today || '—'}\n`;
+      if (p.blockers) md += `- **${t('blockers')}:** ${p.blockers}\n`;
       md += '\n';
     }
   }
 
   // Retro: Went Well / Went Wrong / Improvements
-  md += renderList('😊 Went Well', analysis.went_well);
-  md += renderList('😟 Went Wrong', analysis.went_wrong);
-  md += renderList('💡 Improvements', analysis.improvements);
+  md += renderList(t('well'), analysis.went_well);
+  md += renderList(t('wrong'), analysis.went_wrong);
+  md += renderList(t('improvements'), analysis.improvements);
 
   // Decision: Agenda + detailed decisions
-  md += renderList('📋 Agenda Items', analysis.agenda_items);
+  md += renderList(t('agenda'), analysis.agenda_items);
 
   if (analysis.decisions?.length > 0) {
-    md += '\n---\n\n## ⚖️ Decisions\n\n';
+    md += `\n---\n\n## ${t('decisions')}\n\n`;
     for (const d of analysis.decisions) {
       if (typeof d === 'string') {
         md += `- ${d}\n`;
       } else {
         md += `- **${d.decision}**`;
-        if (d.rationale) md += `\n  - Rationale: ${d.rationale}`;
-        if (d.owner) md += `\n  - Owner: ${d.owner}`;
+        if (d.rationale) md += `\n  - ${t('rationale')}: ${d.rationale}`;
+        if (d.owner) md += `\n  - ${t('owner')}: ${d.owner}`;
         md += '\n';
       }
     }
   }
 
-  md += renderList('⏳ Deferred Items', analysis.deferred_items);
+  md += renderList(t('deferred'), analysis.deferred_items);
 
   // Action items (present in all templates)
   if (analysis.action_items?.length > 0) {
-    md += '\n---\n\n## ✅ Action Items\n\n';
+    md += `\n---\n\n## ${t('actions')}\n\n`;
     for (const a of analysis.action_items) {
+      const ownerLabel = t('owner');
       const owner = a.owner ? ` → ${a.owner}` : '';
       md += `- [ ] ${a.item}${owner}\n`;
     }
   }
 
   // 1:1: Feedback, growth areas, next topics
-  md += renderList('💬 Feedback', analysis.feedback);
-  md += renderList('📈 Growth Areas', analysis.growth_areas);
-  md += renderList('📅 Next Meeting Topics', analysis.next_meeting_topics);
+  md += renderList(t('feedback'), analysis.feedback);
+  md += renderList(t('growth'), analysis.growth_areas);
+  md += renderList(t('next'), analysis.next_meeting_topics);
 
   return md;
 }
